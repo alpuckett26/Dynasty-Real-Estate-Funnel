@@ -10,31 +10,11 @@ import {
   validateConsentBeforeSend,
   isWithinQuietHours,
   sanitizeAIOutput,
-  SAFE_MESSAGING_GUIDELINES,
 } from '@/lib/utils/compliance';
+import { NURTURE_AGENT_PROMPT } from '@/lib/prompts';
 import type { NurtureAgentInput, NurtureAgentOutput } from '@/types/agent';
 
-const REACTIVATION_SYSTEM_PROMPT = `
-You are a real estate follow-up specialist for Dynasty Real Estate.
-Write a short, personalized outreach message to re-engage a dormant lead.
-
-${SAFE_MESSAGING_GUIDELINES}
-
-RULES:
-- Maximum 3 sentences for SMS; 5 sentences for email.
-- Be warm and helpful, NOT pushy or salesy.
-- Reference their specific situation (buyer, seller, area, timeline) if known.
-- Offer genuine value: market update, new listings, or a quick check-in.
-- End with a single soft CTA (not a demand).
-- Never mention how long it's been since last contact.
-- All language must be fair-housing safe.
-
-Return ONLY valid JSON:
-{
-  "subject": "Email subject line (empty string for SMS)",
-  "body": "Message body"
-}
-`.trim();
+const REACTIVATION_SYSTEM_PROMPT = NURTURE_AGENT_PROMPT;
 
 export async function runNurtureAgent(
   input: NurtureAgentInput

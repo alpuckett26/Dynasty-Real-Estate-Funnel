@@ -1,0 +1,610 @@
+{
+  "_meta": {
+    "version": "2.0",
+    "description": "ManyChat flow definitions for Dynasty Real Estate. Import these into ManyChat via Settings → Import. All flows work on both Instagram DM and Facebook Messenger unless noted.",
+    "channels": ["instagram", "messenger"],
+    "specialAdCategory": "HOUSING",
+    "fairHousingNote": "All ad targeting must use Meta Special Ad Category: Housing. No demographic exclusions."
+  },
+
+  "globalKeywords": [
+    {
+      "keywords": ["buy", "buying", "looking to buy", "find a home", "home search", "homes for sale"],
+      "action": "trigger_flow",
+      "flowId": "flow_buyer_intake",
+      "description": "Buyer intent keywords"
+    },
+    {
+      "keywords": ["sell", "selling", "list my home", "home value", "what's my home worth", "valuation"],
+      "action": "trigger_flow",
+      "flowId": "flow_seller_intake",
+      "description": "Seller intent keywords"
+    },
+    {
+      "keywords": ["relocat", "moving to", "moving from", "new city", "transfer", "relo"],
+      "action": "trigger_flow",
+      "flowId": "flow_relocation_intake",
+      "description": "Relocation intent keywords"
+    },
+    {
+      "keywords": ["agent", "partner", "referral", "collaborate", "co-broke"],
+      "action": "trigger_flow",
+      "flowId": "flow_partner_intake",
+      "description": "Partner/agent keywords"
+    },
+    {
+      "keywords": ["stop", "unsubscribe", "opt out", "remove me", "no more messages"],
+      "action": "unsubscribe",
+      "description": "Opt-out — immediately stops all automations and marks contact opted-out"
+    },
+    {
+      "keywords": ["hi", "hello", "hey", "start", "info"],
+      "action": "trigger_flow",
+      "flowId": "flow_welcome",
+      "description": "Generic greeting → welcome flow"
+    }
+  ],
+
+  "flows": [
+    {
+      "id": "flow_welcome",
+      "name": "🏠 Welcome Flow",
+      "channel": "both",
+      "trigger": "keyword_or_story_reply",
+      "steps": [
+        {
+          "id": "step_1",
+          "type": "message",
+          "delay": 0,
+          "content": {
+            "type": "text",
+            "text": "Hey! 👋 Welcome to Dynasty Real Estate. I'm here to help you with anything real estate related.\n\nWhat brings you here today?"
+          },
+          "quickReplies": [
+            { "label": "🏡 Buy a Home",   "action": "trigger_flow", "flowId": "flow_buyer_intake" },
+            { "label": "💰 Sell My Home", "action": "trigger_flow", "flowId": "flow_seller_intake" },
+            { "label": "✈️ Relocating",  "action": "trigger_flow", "flowId": "flow_relocation_intake" },
+            { "label": "🤝 I'm an Agent", "action": "trigger_flow", "flowId": "flow_partner_intake" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "flow_buyer_intake",
+      "name": "🏡 Buyer Intake",
+      "channel": "both",
+      "trigger": "keyword_or_quick_reply",
+      "hubspotIntent": "buyer",
+      "steps": [
+        {
+          "id": "b1",
+          "type": "message",
+          "delay": 0,
+          "content": {
+            "type": "text",
+            "text": "Exciting! Let's find your perfect home. 🏠\n\nWhat area or neighborhood are you looking in?"
+          },
+          "userInputCapture": {
+            "variable": "areas_of_interest",
+            "type": "free_text",
+            "onCapture": "b2"
+          }
+        },
+        {
+          "id": "b2",
+          "type": "message",
+          "delay": 1000,
+          "content": {
+            "type": "text",
+            "text": "Great choice! And what's your rough price range?"
+          },
+          "quickReplies": [
+            { "label": "Under $300K",      "value": "0-300000",     "variable": "budget_range" },
+            { "label": "$300K–$500K",      "value": "300000-500000","variable": "budget_range" },
+            { "label": "$500K–$800K",      "value": "500000-800000","variable": "budget_range" },
+            { "label": "$800K–$1M",        "value": "800000-1000000","variable": "budget_range" },
+            { "label": "$1M+",             "value": "1000000+",     "variable": "budget_range" }
+          ],
+          "onReply": "b3"
+        },
+        {
+          "id": "b3",
+          "type": "message",
+          "delay": 1000,
+          "content": {
+            "type": "text",
+            "text": "Got it. How soon are you hoping to move?"
+          },
+          "quickReplies": [
+            { "label": "ASAP (0–3 months)",   "value": "0-3m",    "variable": "timeline" },
+            { "label": "3–6 months",           "value": "3-6m",    "variable": "timeline" },
+            { "label": "6–12 months",          "value": "6-12m",   "variable": "timeline" },
+            { "label": "Just exploring",       "value": "12m+",    "variable": "timeline" }
+          ],
+          "onReply": "b4"
+        },
+        {
+          "id": "b4",
+          "type": "message",
+          "delay": 1000,
+          "content": {
+            "type": "text",
+            "text": "Perfect. Have you been pre-approved for a mortgage yet?"
+          },
+          "quickReplies": [
+            { "label": "Yes, I'm pre-approved", "value": "pre-approved", "variable": "financing_status" },
+            { "label": "Paying cash",           "value": "cash",         "variable": "financing_status" },
+            { "label": "Not yet",               "value": "not-yet",      "variable": "financing_status" }
+          ],
+          "onReply": "b5"
+        },
+        {
+          "id": "b5",
+          "type": "message",
+          "delay": 1000,
+          "content": {
+            "type": "text",
+            "text": "Last thing — what's the best way for our team to reach you? I'll have an agent call or text you with available listings."
+          },
+          "quickReplies": [
+            { "label": "📞 Call me",   "value": "call",  "variable": "preferred_contact" },
+            { "label": "💬 Text me",   "value": "sms",   "variable": "preferred_contact" },
+            { "label": "📧 Email me",  "value": "email", "variable": "preferred_contact" }
+          ],
+          "onReply": "b6"
+        },
+        {
+          "id": "b6",
+          "type": "collect_contact",
+          "delay": 0,
+          "fields": {
+            "name": { "prompt": "And your name?", "variable": "contact_name", "required": true },
+            "email": {
+              "prompt": "Your email address?",
+              "variable": "contact_email",
+              "required": false,
+              "skipIf": "preferred_contact == call OR sms"
+            },
+            "phone": {
+              "prompt": "Best phone number?",
+              "variable": "contact_phone",
+              "required": false,
+              "skipIf": "preferred_contact == email"
+            }
+          },
+          "onComplete": "b_consent"
+        },
+        {
+          "id": "b_consent",
+          "type": "message",
+          "delay": 0,
+          "content": {
+            "type": "text",
+            "text": "By continuing, you agree to receive communications from Dynasty Real Estate. Reply STOP anytime to opt out."
+          },
+          "quickReplies": [
+            { "label": "✅ I agree", "action": "b_complete" },
+            { "label": "❌ No thanks", "action": "end_flow" }
+          ]
+        },
+        {
+          "id": "b_complete",
+          "type": "action",
+          "actions": [
+            {
+              "type": "set_custom_field",
+              "field": "lead_type",
+              "value": "Buyer"
+            },
+            {
+              "type": "set_custom_field",
+              "field": "consent_dm",
+              "value": "true"
+            },
+            {
+              "type": "webhook",
+              "url": "{{SITE_URL}}/api/webhooks",
+              "method": "POST",
+              "headers": { "Content-Type": "application/json", "x-webhook-signature": "{{WEBHOOK_SECRET}}" },
+              "body": {
+                "type": "manychat",
+                "firstName": "{{contact_name | split: ' ' | first}}",
+                "lastName": "{{contact_name | split: ' ' | last}}",
+                "email": "{{contact_email}}",
+                "phone": "{{contact_phone}}",
+                "channel": "ig-dm",
+                "conversationSummary": "Buyer seeking {{areas_of_interest}}, budget {{budget_range}}, timeline {{timeline}}, financing {{financing_status}}",
+                "consentDm": true
+              }
+            },
+            {
+              "type": "tag",
+              "tag": "buyer-lead"
+            },
+            {
+              "type": "tag",
+              "tag": "dm-consent"
+            }
+          ],
+          "onComplete": "b_confirmation"
+        },
+        {
+          "id": "b_confirmation",
+          "type": "message",
+          "delay": 500,
+          "content": {
+            "type": "text",
+            "text": "You're all set! 🎉 A Dynasty agent will reach out within the next few minutes with homes that match your criteria.\n\nIn the meantime, check out our neighborhood guides 👇"
+          },
+          "buttons": [
+            {
+              "type": "url",
+              "label": "Explore Neighborhoods",
+              "url": "{{SITE_URL}}/neighborhood/downtown"
+            },
+            {
+              "type": "url",
+              "label": "Book a Consultation",
+              "url": "{{CALENDLY_URL}}"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "flow_seller_intake",
+      "name": "💰 Seller Intake",
+      "channel": "both",
+      "trigger": "keyword_or_quick_reply",
+      "hubspotIntent": "seller",
+      "steps": [
+        {
+          "id": "s1",
+          "type": "message",
+          "delay": 0,
+          "content": {
+            "type": "text",
+            "text": "Great — let's get you a home valuation! 📈\n\nWhat's the address of the property you're thinking of selling?"
+          },
+          "userInputCapture": {
+            "variable": "property_address",
+            "type": "free_text",
+            "onCapture": "s2"
+          }
+        },
+        {
+          "id": "s2",
+          "type": "message",
+          "delay": 1000,
+          "content": {
+            "type": "text",
+            "text": "Got it. How soon are you thinking about selling?"
+          },
+          "quickReplies": [
+            { "label": "ASAP",           "value": "0-3m",  "variable": "sell_timeline" },
+            { "label": "3–6 months",     "value": "3-6m",  "variable": "sell_timeline" },
+            { "label": "6–12 months",    "value": "6-12m", "variable": "sell_timeline" },
+            { "label": "Just curious",   "value": "12m+",  "variable": "sell_timeline" }
+          ],
+          "onReply": "s3"
+        },
+        {
+          "id": "s3",
+          "type": "message",
+          "delay": 1000,
+          "content": {
+            "type": "text",
+            "text": "Perfect. And have you already bought or found your next place, or is that part of the plan too?"
+          },
+          "quickReplies": [
+            { "label": "Already have next home", "value": "no_buy_needed", "variable": "also_buying" },
+            { "label": "Need to buy too",        "value": "also_buying",   "variable": "also_buying" },
+            { "label": "Not sure yet",           "value": "unknown",       "variable": "also_buying" }
+          ],
+          "onReply": "s4"
+        },
+        {
+          "id": "s4",
+          "type": "collect_contact",
+          "delay": 0,
+          "fields": {
+            "name":  { "prompt": "What's your name?",         "variable": "contact_name",  "required": true },
+            "email": { "prompt": "Best email for your valuation report?", "variable": "contact_email", "required": true },
+            "phone": { "prompt": "And a phone number?",       "variable": "contact_phone", "required": true }
+          },
+          "onComplete": "s_consent"
+        },
+        {
+          "id": "s_consent",
+          "type": "message",
+          "delay": 0,
+          "content": {
+            "type": "text",
+            "text": "By continuing, you agree to receive communications from Dynasty Real Estate. Reply STOP anytime to opt out."
+          },
+          "quickReplies": [
+            { "label": "✅ I agree", "action": "s_complete" },
+            { "label": "❌ No thanks", "action": "end_flow" }
+          ]
+        },
+        {
+          "id": "s_complete",
+          "type": "action",
+          "actions": [
+            { "type": "set_custom_field", "field": "lead_type",  "value": "Seller" },
+            { "type": "set_custom_field", "field": "consent_dm", "value": "true" },
+            {
+              "type": "webhook",
+              "url": "{{SITE_URL}}/api/webhooks",
+              "method": "POST",
+              "headers": { "Content-Type": "application/json", "x-webhook-signature": "{{WEBHOOK_SECRET}}" },
+              "body": {
+                "type": "manychat",
+                "firstName": "{{contact_name | split: ' ' | first}}",
+                "lastName": "{{contact_name | split: ' ' | last}}",
+                "email": "{{contact_email}}",
+                "phone": "{{contact_phone}}",
+                "channel": "ig-dm",
+                "conversationSummary": "Seller at {{property_address}}, timeline {{sell_timeline}}, also buying: {{also_buying}}",
+                "consentDm": true
+              }
+            },
+            { "type": "tag", "tag": "seller-lead" },
+            { "type": "tag", "tag": "dm-consent" }
+          ],
+          "onComplete": "s_confirmation"
+        },
+        {
+          "id": "s_confirmation",
+          "type": "message",
+          "delay": 500,
+          "content": {
+            "type": "text",
+            "text": "Excellent! We're preparing your complimentary home valuation based on current market data. 📊\n\nA Dynasty listing specialist will follow up within 24 hours. Want to book a call now?"
+          },
+          "buttons": [
+            { "type": "url", "label": "Get Full Valuation Online", "url": "{{SITE_URL}}/sell" },
+            { "type": "url", "label": "Book a Listing Consult", "url": "{{CALENDLY_URL}}" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "flow_relocation_intake",
+      "name": "✈️ Relocation Intake",
+      "channel": "both",
+      "trigger": "keyword_or_quick_reply",
+      "hubspotIntent": "buyer",
+      "steps": [
+        {
+          "id": "r1",
+          "type": "message",
+          "delay": 0,
+          "content": {
+            "type": "text",
+            "text": "Welcome! We specialize in helping people relocate. 🗺️\n\nWhere are you moving from?"
+          },
+          "userInputCapture": { "variable": "origin_city", "type": "free_text", "onCapture": "r2" }
+        },
+        {
+          "id": "r2",
+          "type": "message",
+          "delay": 1000,
+          "content": { "type": "text", "text": "And what neighborhood or area are you hoping to land in?" },
+          "userInputCapture": { "variable": "areas_of_interest", "type": "free_text", "onCapture": "r3" }
+        },
+        {
+          "id": "r3",
+          "type": "message",
+          "delay": 1000,
+          "content": { "type": "text", "text": "What's your move-in timeline?" },
+          "quickReplies": [
+            { "label": "Within 60 days", "value": "0-3m",  "variable": "timeline" },
+            { "label": "3–6 months",     "value": "3-6m",  "variable": "timeline" },
+            { "label": "6–12 months",    "value": "6-12m", "variable": "timeline" }
+          ],
+          "onReply": "r4"
+        },
+        {
+          "id": "r4",
+          "type": "message",
+          "delay": 1000,
+          "content": { "type": "text", "text": "Is this for a job relocation, family, or lifestyle change?" },
+          "quickReplies": [
+            { "label": "Job / Corporate",  "value": "job",       "variable": "relo_reason" },
+            { "label": "Family",           "value": "family",    "variable": "relo_reason" },
+            { "label": "Lifestyle",        "value": "lifestyle", "variable": "relo_reason" }
+          ],
+          "onReply": "r5"
+        },
+        {
+          "id": "r5",
+          "type": "collect_contact",
+          "delay": 0,
+          "fields": {
+            "name":  { "prompt": "What's your name?", "variable": "contact_name",  "required": true },
+            "email": { "prompt": "Email address?",    "variable": "contact_email", "required": true },
+            "phone": { "prompt": "Phone number?",     "variable": "contact_phone", "required": true }
+          },
+          "onComplete": "r_consent"
+        },
+        {
+          "id": "r_consent",
+          "type": "message",
+          "delay": 0,
+          "content": { "type": "text", "text": "By continuing, you agree to receive communications from Dynasty Real Estate. Reply STOP anytime." },
+          "quickReplies": [
+            { "label": "✅ I agree",    "action": "r_complete" },
+            { "label": "❌ No thanks",  "action": "end_flow" }
+          ]
+        },
+        {
+          "id": "r_complete",
+          "type": "action",
+          "actions": [
+            { "type": "set_custom_field", "field": "lead_type",  "value": "Buyer" },
+            { "type": "set_custom_field", "field": "consent_dm", "value": "true" },
+            {
+              "type": "webhook",
+              "url": "{{SITE_URL}}/api/webhooks",
+              "method": "POST",
+              "headers": { "Content-Type": "application/json", "x-webhook-signature": "{{WEBHOOK_SECRET}}" },
+              "body": {
+                "type": "manychat",
+                "firstName": "{{contact_name | split: ' ' | first}}",
+                "lastName": "{{contact_name | split: ' ' | last}}",
+                "email": "{{contact_email}}",
+                "phone": "{{contact_phone}}",
+                "channel": "ig-dm",
+                "conversationSummary": "Relocating from {{origin_city}} to {{areas_of_interest}}, timeline {{timeline}}, reason {{relo_reason}}",
+                "consentDm": true
+              }
+            },
+            { "type": "tag", "tag": "relocation-lead" },
+            { "type": "tag", "tag": "dm-consent" }
+          ],
+          "onComplete": "r_confirmation"
+        },
+        {
+          "id": "r_confirmation",
+          "type": "message",
+          "delay": 500,
+          "content": { "type": "text", "text": "Perfect! Our relocation specialist will reach out within a few hours with a curated neighborhood guide and available homes that match your criteria. 🏡" },
+          "buttons": [
+            { "type": "url", "label": "View Relocation Guide", "url": "{{SITE_URL}}/relocate" },
+            { "type": "url", "label": "Book Virtual Tour", "url": "{{CALENDLY_URL}}" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "flow_partner_intake",
+      "name": "🤝 Agent / Partner Intake",
+      "channel": "both",
+      "trigger": "keyword_or_quick_reply",
+      "hubspotIntent": "partner",
+      "steps": [
+        {
+          "id": "p1",
+          "type": "message",
+          "delay": 0,
+          "content": { "type": "text", "text": "Great! We love working with other real estate professionals. 🤝\n\nAre you looking to co-broke a deal, send a referral, or explore another kind of partnership?" },
+          "quickReplies": [
+            { "label": "Co-broke / Referral", "value": "co-broke",   "variable": "partner_type" },
+            { "label": "Vendor",              "value": "vendor",     "variable": "partner_type" },
+            { "label": "Investor",            "value": "investor",   "variable": "partner_type" },
+            { "label": "Other",               "value": "other",      "variable": "partner_type" }
+          ],
+          "onReply": "p2"
+        },
+        {
+          "id": "p2",
+          "type": "collect_contact",
+          "delay": 0,
+          "fields": {
+            "name":    { "prompt": "Your name and brokerage?",  "variable": "contact_name",  "required": true },
+            "email":   { "prompt": "Best email to reach you?",  "variable": "contact_email", "required": true },
+            "phone":   { "prompt": "Phone number?",             "variable": "contact_phone", "required": true }
+          },
+          "onComplete": "p_complete"
+        },
+        {
+          "id": "p_complete",
+          "type": "action",
+          "actions": [
+            { "type": "set_custom_field", "field": "lead_type", "value": "Partner" },
+            {
+              "type": "webhook",
+              "url": "{{SITE_URL}}/api/webhooks",
+              "method": "POST",
+              "headers": { "Content-Type": "application/json", "x-webhook-signature": "{{WEBHOOK_SECRET}}" },
+              "body": {
+                "type": "manychat",
+                "firstName": "{{contact_name | split: ' ' | first}}",
+                "lastName": "{{contact_name | split: ' ' | last}}",
+                "email": "{{contact_email}}",
+                "phone": "{{contact_phone}}",
+                "channel": "ig-dm",
+                "conversationSummary": "Partner inquiry: {{partner_type}}",
+                "consentDm": true
+              }
+            },
+            { "type": "tag", "tag": "partner-lead" }
+          ],
+          "onComplete": "p_confirmation"
+        },
+        {
+          "id": "p_confirmation",
+          "type": "message",
+          "delay": 500,
+          "content": { "type": "text", "text": "Got it! Our partner relations team will be in touch within 1 business day. We look forward to working together! 🏆" }
+        }
+      ]
+    },
+
+    {
+      "id": "flow_post_close_review",
+      "name": "⭐ Post-Close Review Request",
+      "channel": "both",
+      "trigger": "manual_or_api",
+      "description": "Trigger via API after deal stage changes to 'closed_won'. Wait 3 days before sending.",
+      "steps": [
+        {
+          "id": "rev1",
+          "type": "message",
+          "delay": 259200000,
+          "content": { "type": "text", "text": "Congratulations again on your new home! 🎉 We hope the move is going smoothly.\n\nWould you mind taking 60 seconds to share your experience? Your review helps other families find trusted agents." },
+          "buttons": [
+            { "type": "url", "label": "⭐ Leave a Google Review", "url": "{{GOOGLE_REVIEW_URL}}" },
+            { "type": "url", "label": "Leave a Zillow Review",    "url": "{{ZILLOW_REVIEW_URL}}" }
+          ]
+        },
+        {
+          "id": "rev2",
+          "type": "message",
+          "delay": 604800000,
+          "content": { "type": "text", "text": "P.S. — Know anyone thinking about buying or selling? We'd love the chance to help them the way we helped you. 🏠\n\nWho comes to mind?" },
+          "userInputCapture": { "variable": "referral_name", "type": "free_text", "onCapture": "rev3" }
+        },
+        {
+          "id": "rev3",
+          "type": "action",
+          "actions": [
+            { "type": "tag", "tag": "referral-submitted" },
+            { "type": "notify_agent", "message": "{{contact_name}} referred {{referral_name}} for follow-up." }
+          ],
+          "onComplete": "rev4"
+        },
+        {
+          "id": "rev4",
+          "type": "message",
+          "delay": 0,
+          "content": { "type": "text", "text": "Amazing, thank you! 🙏 We'll reach out to {{referral_name}} and make sure they're taken care of." }
+        }
+      ]
+    }
+  ],
+
+  "variables": {
+    "SITE_URL": "https://dynastyrealestate.com",
+    "CALENDLY_URL": "https://calendly.com/dynasty/consultation",
+    "WEBHOOK_SECRET": "SET_THIS_IN_MANYCHAT_CUSTOM_FIELD",
+    "GOOGLE_REVIEW_URL": "https://g.page/r/XXXXX/review",
+    "ZILLOW_REVIEW_URL": "https://www.zillow.com/reviews/XXXXX"
+  },
+
+  "implementationNotes": [
+    "Import each flow into ManyChat via Flows → New Flow → Import JSON.",
+    "Set global Keywords in ManyChat → Automation → Keywords.",
+    "Replace all {{VARIABLE}} placeholders in ManyChat → Settings → Custom Fields.",
+    "Connect the Instagram Business Account and Facebook Page in ManyChat → Channels.",
+    "Enable 'Collect emails' and 'Collect phones' in ManyChat → Settings → Opt-in Tools.",
+    "Use ManyChat's built-in 24-hour messaging window for session messages. For follow-up beyond 24h, use Message Tags: CONFIRMED_EVENT_UPDATE or use email.",
+    "For Instagram: Story mention triggers can be added to flow_welcome as an additional trigger.",
+    "All ad audiences must use Meta Special Ad Category: Housing — no demographic exclusions."
+  ]
+}

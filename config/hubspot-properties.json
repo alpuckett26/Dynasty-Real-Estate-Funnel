@@ -1,0 +1,334 @@
+{
+  "_meta": {
+    "version": "2.0",
+    "description": "All custom HubSpot contact properties required by the Dynasty Real Estate AI funnel. Run scripts/setup-hubspot.ts to create these automatically.",
+    "groupName": "dynasty_lead_intelligence",
+    "groupLabel": "Dynasty Lead Intelligence"
+  },
+
+  "propertyGroups": [
+    {
+      "name": "dynasty_lead_intelligence",
+      "displayOrder": 1,
+      "label": "Lead Intelligence"
+    },
+    {
+      "name": "dynasty_channel",
+      "displayOrder": 2,
+      "label": "Channel & Source"
+    },
+    {
+      "name": "dynasty_consent",
+      "displayOrder": 3,
+      "label": "Consent & Compliance"
+    },
+    {
+      "name": "dynasty_ai_outputs",
+      "displayOrder": 4,
+      "label": "AI Outputs"
+    },
+    {
+      "name": "dynasty_lifecycle",
+      "displayOrder": 5,
+      "label": "Lifecycle & Reactivation"
+    }
+  ],
+
+  "contactProperties": [
+    {
+      "name": "lead_type",
+      "label": "Lead Type",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "enumeration",
+      "fieldType": "select",
+      "description": "Primary intent of this contact",
+      "options": [
+        { "label": "Buyer",   "value": "Buyer",   "displayOrder": 1, "hidden": false },
+        { "label": "Seller",  "value": "Seller",  "displayOrder": 2, "hidden": false },
+        { "label": "Both",    "value": "Both",    "displayOrder": 3, "hidden": false },
+        { "label": "Partner", "value": "Partner", "displayOrder": 4, "hidden": false },
+        { "label": "Unknown", "value": "Unknown", "displayOrder": 5, "hidden": false }
+      ],
+      "formField": true,
+      "displayOrder": 1
+    },
+    {
+      "name": "areas_of_interest",
+      "label": "Area(s) of Interest",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "string",
+      "fieldType": "textarea",
+      "description": "Neighborhoods or cities the lead is interested in",
+      "formField": true,
+      "displayOrder": 2
+    },
+    {
+      "name": "budget_min",
+      "label": "Budget Minimum ($)",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Minimum budget in USD",
+      "formField": true,
+      "displayOrder": 3
+    },
+    {
+      "name": "budget_max",
+      "label": "Budget Maximum ($)",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Maximum budget in USD",
+      "formField": true,
+      "displayOrder": 4
+    },
+    {
+      "name": "timeline",
+      "label": "Purchase/Sale Timeline",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "enumeration",
+      "fieldType": "select",
+      "description": "When the lead plans to transact",
+      "options": [
+        { "label": "Within 3 months", "value": "0-3m",    "displayOrder": 1 },
+        { "label": "3–6 months",      "value": "3-6m",    "displayOrder": 2 },
+        { "label": "6–12 months",     "value": "6-12m",   "displayOrder": 3 },
+        { "label": "12+ months",      "value": "12m+",    "displayOrder": 4 },
+        { "label": "Unknown",         "value": "unknown", "displayOrder": 5 }
+      ],
+      "formField": true,
+      "displayOrder": 5
+    },
+    {
+      "name": "financing_status",
+      "label": "Financing Status",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "enumeration",
+      "fieldType": "select",
+      "description": "Current financing/pre-approval status",
+      "options": [
+        { "label": "Pre-approved", "value": "Pre-approved", "displayOrder": 1 },
+        { "label": "Paying Cash",  "value": "Cash",         "displayOrder": 2 },
+        { "label": "Not Yet",      "value": "Not yet",      "displayOrder": 3 },
+        { "label": "Unknown",      "value": "Unknown",      "displayOrder": 4 }
+      ],
+      "formField": true,
+      "displayOrder": 6
+    },
+    {
+      "name": "motivation_score",
+      "label": "Motivation Score (0–100)",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "number",
+      "fieldType": "number",
+      "description": "AI-computed motivation score based on financing, budget clarity, and stated intent",
+      "formField": false,
+      "displayOrder": 7
+    },
+    {
+      "name": "urgency_score",
+      "label": "Urgency Score (0–100)",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "number",
+      "fieldType": "number",
+      "description": "AI-computed urgency score based on timeline, response speed, and high-intent signals",
+      "formField": false,
+      "displayOrder": 8
+    },
+    {
+      "name": "total_lead_score",
+      "label": "Total Lead Score (0–100)",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Composite weighted lead score. Hot ≥70, Warm 40–69, Cold <40",
+      "formField": false,
+      "displayOrder": 9
+    },
+    {
+      "name": "lead_route",
+      "label": "Lead Route",
+      "groupName": "dynasty_lead_intelligence",
+      "type": "enumeration",
+      "fieldType": "select",
+      "description": "Routing classification driving automation enrollment",
+      "options": [
+        { "label": "Hot",     "value": "Hot",     "displayOrder": 1 },
+        { "label": "Warm",    "value": "Warm",    "displayOrder": 2 },
+        { "label": "Cold",    "value": "Cold",    "displayOrder": 3 },
+        { "label": "Partner", "value": "Partner", "displayOrder": 4 }
+      ],
+      "formField": false,
+      "displayOrder": 10
+    },
+
+    {
+      "name": "channel_source",
+      "label": "Channel Source",
+      "groupName": "dynasty_channel",
+      "type": "enumeration",
+      "fieldType": "select",
+      "description": "The specific channel where this lead first engaged",
+      "options": [
+        { "label": "Instagram DM",    "value": "ig-dm",        "displayOrder": 1 },
+        { "label": "Facebook Messenger", "value": "messenger", "displayOrder": 2 },
+        { "label": "Website Chat",    "value": "website-chat", "displayOrder": 3 },
+        { "label": "Web Form",        "value": "form",         "displayOrder": 4 },
+        { "label": "Paid Ads",        "value": "ads",          "displayOrder": 5 },
+        { "label": "Open House",      "value": "open-house",   "displayOrder": 6 },
+        { "label": "Referral",        "value": "referral",     "displayOrder": 7 },
+        { "label": "Phone Call",      "value": "call",         "displayOrder": 8 },
+        { "label": "Unknown",         "value": "unknown",      "displayOrder": 9 }
+      ],
+      "formField": false,
+      "displayOrder": 1
+    },
+    {
+      "name": "utm_source",
+      "label": "UTM Source",
+      "groupName": "dynasty_channel",
+      "type": "string",
+      "fieldType": "text",
+      "description": "utm_source from first-touch URL",
+      "formField": false,
+      "displayOrder": 2
+    },
+    {
+      "name": "utm_medium",
+      "label": "UTM Medium",
+      "groupName": "dynasty_channel",
+      "type": "string",
+      "fieldType": "text",
+      "description": "utm_medium from first-touch URL",
+      "formField": false,
+      "displayOrder": 3
+    },
+    {
+      "name": "utm_campaign",
+      "label": "UTM Campaign",
+      "groupName": "dynasty_channel",
+      "type": "string",
+      "fieldType": "text",
+      "description": "utm_campaign from first-touch URL",
+      "formField": false,
+      "displayOrder": 4
+    },
+
+    {
+      "name": "consent_sms",
+      "label": "SMS Consent",
+      "groupName": "dynasty_consent",
+      "type": "bool",
+      "fieldType": "booleancheckbox",
+      "description": "Contact has explicitly consented to receive SMS messages",
+      "formField": false,
+      "displayOrder": 1
+    },
+    {
+      "name": "consent_email",
+      "label": "Email Consent",
+      "groupName": "dynasty_consent",
+      "type": "bool",
+      "fieldType": "booleancheckbox",
+      "description": "Contact has explicitly consented to receive marketing emails",
+      "formField": false,
+      "displayOrder": 2
+    },
+    {
+      "name": "consent_dm",
+      "label": "DM Consent",
+      "groupName": "dynasty_consent",
+      "type": "bool",
+      "fieldType": "booleancheckbox",
+      "description": "Contact has consented to receive Instagram/Messenger DMs",
+      "formField": false,
+      "displayOrder": 3
+    },
+    {
+      "name": "consent_timestamp",
+      "label": "Consent Timestamp",
+      "groupName": "dynasty_consent",
+      "type": "datetime",
+      "fieldType": "date",
+      "description": "ISO timestamp of when consent was recorded",
+      "formField": false,
+      "displayOrder": 4
+    },
+
+    {
+      "name": "ai_conversation_summary",
+      "label": "AI Conversation Summary",
+      "groupName": "dynasty_ai_outputs",
+      "type": "string",
+      "fieldType": "textarea",
+      "description": "2–3 sentence AI-generated summary of the lead conversation for the CRM note",
+      "formField": false,
+      "displayOrder": 1
+    },
+    {
+      "name": "recommended_next_action",
+      "label": "Recommended Next Action",
+      "groupName": "dynasty_ai_outputs",
+      "type": "string",
+      "fieldType": "textarea",
+      "description": "AI-recommended next step for the assigned agent",
+      "formField": false,
+      "displayOrder": 2
+    },
+    {
+      "name": "handoff_reason",
+      "label": "Handoff Reason",
+      "groupName": "dynasty_ai_outputs",
+      "type": "string",
+      "fieldType": "textarea",
+      "description": "Reason the AI flagged this lead for human review",
+      "formField": false,
+      "displayOrder": 3
+    },
+
+    {
+      "name": "last_meaningful_interaction",
+      "label": "Last Meaningful Interaction",
+      "groupName": "dynasty_lifecycle",
+      "type": "datetime",
+      "fieldType": "date",
+      "description": "Most recent date of substantive two-way communication (not automated sends)",
+      "formField": false,
+      "displayOrder": 1
+    },
+    {
+      "name": "reactivation_segment",
+      "label": "Reactivation Segment",
+      "groupName": "dynasty_lifecycle",
+      "type": "enumeration",
+      "fieldType": "select",
+      "description": "Dormancy bucket for reactivation campaign enrollment",
+      "options": [
+        { "label": "Dormant 30 days",  "value": "dormant_30", "displayOrder": 1 },
+        { "label": "Dormant 60 days",  "value": "dormant_60", "displayOrder": 2 },
+        { "label": "Dormant 90+ days", "value": "dormant_90", "displayOrder": 3 },
+        { "label": "Active",           "value": "none",       "displayOrder": 4 }
+      ],
+      "formField": false,
+      "displayOrder": 2
+    }
+  ],
+
+  "pipeline": {
+    "label": "Dynasty Sales Pipeline",
+    "stages": [
+      { "label": "New Lead",               "value": "new_lead",               "displayOrder": 1, "metadata": { "probability": 0.05 } },
+      { "label": "Attempted Contact",      "value": "attempted_contact",      "displayOrder": 2, "metadata": { "probability": 0.10 } },
+      { "label": "Qualified – Buyer",      "value": "qualified_buyer",        "displayOrder": 3, "metadata": { "probability": 0.20 } },
+      { "label": "Qualified – Seller",     "value": "qualified_seller",       "displayOrder": 4, "metadata": { "probability": 0.20 } },
+      { "label": "Qualified – Both",       "value": "qualified_both",         "displayOrder": 5, "metadata": { "probability": 0.25 } },
+      { "label": "Appointment Scheduled",  "value": "appointment_scheduled",  "displayOrder": 6, "metadata": { "probability": 0.40 } },
+      { "label": "Consultation Complete",  "value": "consultation_complete",  "displayOrder": 7, "metadata": { "probability": 0.55 } },
+      { "label": "Active Client",          "value": "active_client",          "displayOrder": 8, "metadata": { "probability": 0.70 } },
+      { "label": "Under Contract",         "value": "under_contract",         "displayOrder": 9, "metadata": { "probability": 0.85 } },
+      { "label": "Closed Won",             "value": "closed_won",             "displayOrder": 10,"metadata": { "probability": 1.00, "isClosed": true } },
+      { "label": "Closed Lost",            "value": "closed_lost",            "displayOrder": 11,"metadata": { "probability": 0.00, "isClosed": true } },
+      { "label": "Nurture – Long Term",    "value": "nurture_long_term",      "displayOrder": 12,"metadata": { "probability": 0.05 } }
+    ]
+  }
+}

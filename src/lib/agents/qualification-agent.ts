@@ -7,36 +7,10 @@
 
 import { chatCompletion } from '@/lib/openai/client';
 import { scoreLead } from '@/lib/scoring/lead-scorer';
+import { QUALIFICATION_AGENT_PROMPT } from '@/lib/prompts';
 import type { QualificationAgentInput, QualificationAgentOutput } from '@/types/agent';
 
-const SYSTEM_PROMPT = `
-You are a real estate lead qualification specialist.
-Analyze the conversation and extract structured lead data.
-
-Return ONLY valid JSON matching this exact schema — no other text:
-{
-  "leadType": "buyer" | "seller" | "both" | "partner" | "unknown",
-  "timelineBucket": "0-3m" | "3-6m" | "6-12m" | "12m+" | "unknown",
-  "financingStatus": "pre-approved" | "not-yet" | "cash" | "unknown",
-  "areasOfInterest": ["string"],
-  "budgetMin": number | null,
-  "budgetMax": number | null,
-  "requestedShowing": boolean,
-  "requestedPricingConsult": boolean,
-  "handoffRequired": boolean,
-  "handoffReason": "string or empty",
-  "crmSummary": "2–3 sentence summary of this lead for the CRM note",
-  "recommendedNextAction": "one clear action for the agent"
-}
-
-Handoff required when:
-- User expressed urgency or distress
-- Legal question raised
-- Pricing guarantee requested
-- User mentioned another agent they're working with
-
-Be conservative — if unsure, choose 'unknown' for enums.
-`.trim();
+const SYSTEM_PROMPT = QUALIFICATION_AGENT_PROMPT;
 
 export async function runQualificationAgent(
   input: QualificationAgentInput

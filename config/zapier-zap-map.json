@@ -1,0 +1,518 @@
+{
+  "_meta": {
+    "version": "2.0",
+    "description": "Complete Zapier zap-by-zap configuration for Dynasty Real Estate. Each object is one Zap. Fields marked 'exact' must match exactly. Fields marked 'mapped' are field-mapped from the trigger data.",
+    "stack": {
+      "formTool": "Next.js API /api/leads",
+      "crm": "HubSpot",
+      "chat": "ManyChat",
+      "scheduling": "Calendly",
+      "sms": "Twilio (or HubSpot SMS add-on)",
+      "email": "HubSpot Sequences or SendGrid",
+      "calls": "CallRail",
+      "analytics": "Google Sheets or BigQuery"
+    }
+  },
+
+  "zaps": [
+
+    {
+      "id": "ZAP-001",
+      "name": "🔥 Hot Lead → Instant Agent SMS Alert",
+      "epic": "C",
+      "priority": "CRITICAL",
+      "description": "When a hot lead (score 70+) is created or updated in HubSpot, send an immediate SMS to the assigned agent.",
+      "trigger": {
+        "app": "HubSpot",
+        "event": "New or Updated Contact",
+        "filter": {
+          "field": "lead_route",
+          "condition": "equals",
+          "value": "Hot"
+        },
+        "pollInterval": "every 5 minutes"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "conditions": [
+            { "field": "lead_route", "condition": "Text exactly matches", "value": "Hot" },
+            { "field": "total_lead_score", "condition": "Greater than or equal to", "value": "70" }
+          ]
+        },
+        {
+          "order": 2,
+          "app": "Twilio",
+          "action": "Send SMS Message",
+          "fieldMap": {
+            "Body": "🔥 HOT LEAD ALERT\nName: {{firstname}} {{lastname}}\nPhone: {{phone}}\nScore: {{total_lead_score}}\nIntent: {{lead_type}}\nTimeline: {{timeline}}\nSource: {{channel_source}}\nNext Action: {{recommended_next_action}}",
+            "To Number": "{{AGENT_PHONE_NUMBER}}",
+            "From Number": "{{TWILIO_FROM_NUMBER}}"
+          }
+        },
+        {
+          "order": 3,
+          "app": "HubSpot",
+          "action": "Update Contact",
+          "fieldMap": {
+            "Contact ID": "{{contact_id}}",
+            "Notes": "Agent SMS alert sent at {{zap_meta_human_now}}"
+          }
+        }
+      ],
+      "slaTarget": "< 2 minutes from lead creation to agent SMS"
+    },
+
+    {
+      "id": "ZAP-002",
+      "name": "📅 Calendly Booking → HubSpot Stage Update + Task",
+      "epic": "B",
+      "priority": "CRITICAL",
+      "description": "When a consultation is booked in Calendly, update the HubSpot contact to 'Appointment Scheduled' and create a prep task.",
+      "trigger": {
+        "app": "Calendly",
+        "event": "Invitee Created",
+        "pollInterval": "every 5 minutes"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "HubSpot",
+          "action": "Find Contact",
+          "fieldMap": {
+            "Search field": "Email",
+            "Search value": "{{invitee_email}}"
+          },
+          "fallback": "Create new contact if not found"
+        },
+        {
+          "order": 2,
+          "app": "HubSpot",
+          "action": "Update Contact",
+          "fieldMap": {
+            "Contact ID": "{{step_1_contact_id}}",
+            "Lifecycle Stage": "Lead",
+            "Deal Stage (via deal)": "appointment_scheduled",
+            "last_meaningful_interaction": "{{event_start_time_iso}}"
+          }
+        },
+        {
+          "order": 3,
+          "app": "HubSpot",
+          "action": "Create Task",
+          "fieldMap": {
+            "Subject": "📅 Prep for consult: {{invitee_name}}",
+            "Body": "Appointment: {{event_start_time}}\nType: {{event_name}}\nNotes from booking: {{invitee_questions_answers}}\nContact score: {{step_1_total_lead_score}}",
+            "Due Date": "{{event_start_time_minus_1_hour}}",
+            "Task Type": "TODO",
+            "Associated Contact ID": "{{step_1_contact_id}}"
+          }
+        },
+        {
+          "order": 4,
+          "app": "Twilio",
+          "action": "Send SMS Message",
+          "fieldMap": {
+            "Body": "📅 New Consult Booked!\n{{invitee_name}} — {{event_start_time}}\nEmail: {{invitee_email}}\nPhone: {{invitee_phone}}",
+            "To Number": "{{AGENT_PHONE_NUMBER}}",
+            "From Number": "{{TWILIO_FROM_NUMBER}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-003",
+      "name": "📞 CallRail Call → HubSpot Contact + Dynasty Webhook",
+      "epic": "B",
+      "priority": "HIGH",
+      "description": "When a tracked call completes via CallRail, create/update the HubSpot contact and fire the Dynasty webhook for AI qualification.",
+      "trigger": {
+        "app": "CallRail",
+        "event": "Call Completed",
+        "filter": "duration > 30 seconds"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "conditions": [
+            { "field": "duration_in_seconds", "condition": "Greater than", "value": "30" }
+          ]
+        },
+        {
+          "order": 2,
+          "app": "Webhooks by Zapier",
+          "action": "POST",
+          "fieldMap": {
+            "URL": "{{SITE_URL}}/api/webhooks",
+            "Payload Type": "JSON",
+            "Data": {
+              "type": "callrail",
+              "callerName": "{{caller_name}}",
+              "callerNumber": "{{caller_number}}",
+              "callDurationSeconds": "{{duration_in_seconds}}",
+              "trackingNumber": "{{tracking_phone_number}}",
+              "utmSource": "{{utm_source}}",
+              "utmCampaign": "{{utm_campaign}}"
+            },
+            "Headers": { "x-webhook-signature": "{{WEBHOOK_SECRET}}" }
+          }
+        },
+        {
+          "order": 3,
+          "app": "HubSpot",
+          "action": "Create or Update Contact",
+          "fieldMap": {
+            "Email": "(leave blank — match by phone)",
+            "Phone": "{{caller_number}}",
+            "channel_source": "call",
+            "utm_source": "{{utm_source}}",
+            "utm_campaign": "{{utm_campaign}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-004",
+      "name": "📧 New HubSpot Contact → Warm Welcome Email Sequence",
+      "epic": "D",
+      "priority": "HIGH",
+      "description": "Enroll new non-hot contacts into the appropriate HubSpot email sequence based on lead type.",
+      "trigger": {
+        "app": "HubSpot",
+        "event": "New Contact in List",
+        "list": "Dynasty – New Leads (not Hot)"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "conditions": [
+            { "field": "lead_route", "condition": "Text exactly matches", "value": "Warm" },
+            { "field": "consent_email", "condition": "Text exactly matches", "value": "true" }
+          ]
+        },
+        {
+          "order": 2,
+          "app": "HubSpot",
+          "action": "Enroll Contact in Sequence",
+          "note": "Use HubSpot's built-in Sequences for this — Zapier triggers enrollment",
+          "fieldMap": {
+            "Contact ID": "{{contact_id}}",
+            "Sequence ID": "{{IF lead_type == 'Buyer' THEN SEQ_BUYER_WARM ELSE IF lead_type == 'Seller' THEN SEQ_SELLER_WARM ELSE SEQ_GENERAL_WARM}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-005",
+      "name": "🔄 Reactivation Batch — Weekly Dormant Lead Trigger",
+      "epic": "D",
+      "priority": "HIGH",
+      "description": "Every Monday at 8am, pull dormant contacts from HubSpot and fire the Dynasty reactivation batch webhook.",
+      "trigger": {
+        "app": "Schedule by Zapier",
+        "event": "Every Week",
+        "day": "Monday",
+        "time": "08:00",
+        "timezone": "America/New_York"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "HubSpot",
+          "action": "Find Contacts in List",
+          "fieldMap": {
+            "List Name": "Dynasty – Dormant 30"
+          },
+          "outputVar": "dormant_30_contacts"
+        },
+        {
+          "order": 2,
+          "app": "HubSpot",
+          "action": "Find Contacts in List",
+          "fieldMap": {
+            "List Name": "Dynasty – Dormant 60"
+          },
+          "outputVar": "dormant_60_contacts"
+        },
+        {
+          "order": 3,
+          "app": "Code by Zapier",
+          "action": "Run JavaScript",
+          "code": "const contacts = [...inputData.dormant_30.map(c => ({...c, segment:'dormant_30', daysSinceLastInteraction:45})), ...inputData.dormant_60.map(c => ({...c, segment:'dormant_60', daysSinceLastInteraction:75}))]; output = {contacts: JSON.stringify(contacts)};",
+          "inputs": { "dormant_30": "{{dormant_30_contacts}}", "dormant_60": "{{dormant_60_contacts}}" }
+        },
+        {
+          "order": 4,
+          "app": "Webhooks by Zapier",
+          "action": "POST",
+          "fieldMap": {
+            "URL": "{{SITE_URL}}/api/webhooks",
+            "Payload Type": "JSON",
+            "Data": {
+              "type": "reactivation_batch",
+              "contacts": "{{step_3_contacts}}"
+            },
+            "Headers": { "x-webhook-signature": "{{WEBHOOK_SECRET}}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-006",
+      "name": "⭐ Closed Won → Review Request via ManyChat",
+      "epic": "D",
+      "priority": "MEDIUM",
+      "description": "When a deal closes, trigger the post-close review ManyChat flow 3 days later.",
+      "trigger": {
+        "app": "HubSpot",
+        "event": "Deal Stage Changed",
+        "filter": {
+          "field": "dealstage",
+          "condition": "equals",
+          "value": "closed_won"
+        }
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "Delay by Zapier",
+          "action": "Delay For",
+          "fieldMap": {
+            "Time Delayed For": "3",
+            "Unit of Time": "Days"
+          }
+        },
+        {
+          "order": 2,
+          "app": "HubSpot",
+          "action": "Get Associated Contact",
+          "fieldMap": { "Deal ID": "{{deal_id}}" }
+        },
+        {
+          "order": 3,
+          "app": "ManyChat",
+          "action": "Send Flow to Subscriber",
+          "fieldMap": {
+            "Flow ID": "flow_post_close_review",
+            "Subscriber Identifier": "{{step_2_manychat_subscriber_id}}",
+            "Note": "Subscriber ID must be stored as a custom HubSpot field 'manychat_subscriber_id' during initial DM capture"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-007",
+      "name": "🏠 Open House Sign-In → HubSpot + Agent Notification",
+      "epic": "B",
+      "priority": "HIGH",
+      "description": "Open-house QR sign-ins are submitted to /api/webhooks which fires qualification. This Zap handles the HubSpot workflow enrollment confirmation.",
+      "trigger": {
+        "app": "HubSpot",
+        "event": "New Contact in List",
+        "list": "Dynasty – Open House Attendees",
+        "note": "Contacts get added to this list when channel_source = open-house"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "HubSpot",
+          "action": "Create Task",
+          "fieldMap": {
+            "Subject": "📋 Follow up with open house visitor: {{firstname}} {{lastname}}",
+            "Body": "Visited: {{areas_of_interest}}\nTimeline: {{timeline}}\nAI Summary: {{ai_conversation_summary}}",
+            "Due Date": "{{today_plus_1_day}}",
+            "Task Type": "CALL",
+            "Associated Contact ID": "{{contact_id}}"
+          }
+        },
+        {
+          "order": 2,
+          "app": "Gmail",
+          "action": "Send Email",
+          "note": "Replace Gmail with your email provider",
+          "fieldMap": {
+            "To": "{{AGENT_EMAIL}}",
+            "Subject": "New Open House Sign-In: {{firstname}} {{lastname}}",
+            "Body": "Name: {{firstname}} {{lastname}}\nEmail: {{email}}\nPhone: {{phone}}\nTimeline: {{timeline}}\nScore: {{total_lead_score}}\nSummary: {{ai_conversation_summary}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-008",
+      "name": "📊 Weekly KPI Digest → Google Sheets",
+      "epic": "E",
+      "priority": "MEDIUM",
+      "description": "Every Sunday at 9pm, pull key metrics from HubSpot and append a weekly summary row to the KPI dashboard Google Sheet.",
+      "trigger": {
+        "app": "Schedule by Zapier",
+        "event": "Every Week",
+        "day": "Sunday",
+        "time": "21:00",
+        "timezone": "America/New_York"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "HubSpot",
+          "action": "Get Contact List Statistics",
+          "fieldMap": { "List Names": ["Dynasty – Hot Leads", "Dynasty – Warm Leads", "Dynasty – Cold Leads", "Dynasty – New Leads (not Hot)"] }
+        },
+        {
+          "order": 2,
+          "app": "HubSpot",
+          "action": "Get Deal Funnel Statistics",
+          "fieldMap": { "Pipeline": "Dynasty Sales Pipeline", "Period": "This Week" }
+        },
+        {
+          "order": 3,
+          "app": "Google Sheets",
+          "action": "Create Spreadsheet Row",
+          "fieldMap": {
+            "Spreadsheet": "Dynasty KPI Dashboard",
+            "Worksheet": "Weekly Metrics",
+            "Week Ending": "{{sunday_date}}",
+            "New Leads": "{{step_1_new_lead_count}}",
+            "Hot Leads": "{{step_1_hot_count}}",
+            "Warm Leads": "{{step_1_warm_count}}",
+            "Appts Scheduled": "{{step_2_appointment_scheduled_count}}",
+            "Consultations": "{{step_2_consultation_complete_count}}",
+            "New Clients": "{{step_2_active_client_count}}",
+            "Closed Won": "{{step_2_closed_won_count}}",
+            "Revenue": "{{step_2_closed_amount}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-009",
+      "name": "🚨 SLA Alert — Hot Lead Not Contacted in 15 Min",
+      "epic": "E",
+      "priority": "CRITICAL",
+      "description": "If a hot lead's task is still 'NOT_STARTED' 15 minutes after creation, send a fallback alert to the manager.",
+      "trigger": {
+        "app": "HubSpot",
+        "event": "Task Updated",
+        "filter": "task_type = CALL AND status = NOT_STARTED"
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "Delay by Zapier",
+          "action": "Delay For",
+          "fieldMap": { "Time Delayed For": "15", "Unit of Time": "Minutes" }
+        },
+        {
+          "order": 2,
+          "app": "HubSpot",
+          "action": "Find Task",
+          "fieldMap": { "Task ID": "{{task_id}}" }
+        },
+        {
+          "order": 3,
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "conditions": [
+            { "field": "task_status", "condition": "Text exactly matches", "value": "NOT_STARTED" }
+          ]
+        },
+        {
+          "order": 4,
+          "app": "Twilio",
+          "action": "Send SMS Message",
+          "fieldMap": {
+            "Body": "⚠️ SLA BREACH: Hot lead task still untouched after 15 min.\nContact: {{associated_contact_firstname}} {{associated_contact_lastname}}\nPhone: {{associated_contact_phone}}\nScore: {{associated_contact_total_lead_score}}\nTask: {{task_subject}}",
+            "To Number": "{{MANAGER_PHONE_NUMBER}}",
+            "From Number": "{{TWILIO_FROM_NUMBER}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "ZAP-010",
+      "name": "📱 New HubSpot Contact → ManyChat Subscriber Sync",
+      "epic": "C",
+      "priority": "MEDIUM",
+      "description": "When a contact is created via the web form (not ManyChat), create a ManyChat subscriber record so future DM flows can be triggered.",
+      "trigger": {
+        "app": "HubSpot",
+        "event": "New Contact",
+        "filter": {
+          "field": "channel_source",
+          "condition": "not_equal_to",
+          "value": "ig-dm",
+          "andCondition": { "field": "channel_source", "condition": "not_equal_to", "value": "messenger" }
+        }
+      },
+      "steps": [
+        {
+          "order": 1,
+          "app": "Filter by Zapier",
+          "action": "Only continue if",
+          "conditions": [
+            { "field": "consent_email", "condition": "Text exactly matches", "value": "true" }
+          ]
+        },
+        {
+          "order": 2,
+          "app": "ManyChat",
+          "action": "Create Subscriber",
+          "fieldMap": {
+            "First Name": "{{firstname}}",
+            "Last Name": "{{lastname}}",
+            "Email": "{{email}}",
+            "Phone": "{{phone}}"
+          }
+        },
+        {
+          "order": 3,
+          "app": "HubSpot",
+          "action": "Update Contact",
+          "fieldMap": {
+            "Contact ID": "{{contact_id}}",
+            "manychat_subscriber_id": "{{step_2_subscriber_id}}"
+          }
+        }
+      ]
+    }
+  ],
+
+  "envVariables": {
+    "SITE_URL": "https://dynastyrealestate.com",
+    "WEBHOOK_SECRET": "Same value as WEBHOOK_SECRET in .env",
+    "AGENT_PHONE_NUMBER": "+1XXXXXXXXXX",
+    "AGENT_EMAIL": "agent@dynastyrealestate.com",
+    "MANAGER_PHONE_NUMBER": "+1XXXXXXXXXX",
+    "TWILIO_FROM_NUMBER": "+1XXXXXXXXXX",
+    "CALENDLY_URL": "https://calendly.com/dynasty/consultation",
+    "GOOGLE_REVIEW_URL": "https://g.page/r/XXXXX/review",
+    "ZILLOW_REVIEW_URL": "https://www.zillow.com/reviews/XXXXX"
+  },
+
+  "buildOrder": [
+    "ZAP-001 — Hot lead alerts (test immediately with a dummy form submit)",
+    "ZAP-002 — Calendly booking sync",
+    "ZAP-003 — CallRail integration",
+    "ZAP-007 — Open house sign-in pipeline",
+    "ZAP-004 — Warm nurture enrollment",
+    "ZAP-009 — SLA breach alerts",
+    "ZAP-006 — Post-close review",
+    "ZAP-005 — Reactivation batch (activate in Week 3)",
+    "ZAP-010 — ManyChat subscriber sync",
+    "ZAP-008 — Weekly KPI digest (activate in Week 4)"
+  ]
+}
