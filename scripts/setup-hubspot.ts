@@ -42,7 +42,7 @@ async function createPropertyGroups() {
   console.log('\n📂 Creating property groups...');
   for (const group of config.propertyGroups) {
     try {
-      await client.crm.properties.propertyGroupsApi.create('contacts', {
+      await client.crm.properties.groupsApi.create('contacts', {
         name: group.name,
         displayOrder: group.displayOrder,
         label: group.label,

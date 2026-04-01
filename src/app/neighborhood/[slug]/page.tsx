@@ -64,17 +64,19 @@ const DEFAULT_NEIGHBORHOOD = {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const n = NEIGHBORHOODS[params.slug] ?? DEFAULT_NEIGHBORHOOD;
+  const { slug } = await params;
+  const n = NEIGHBORHOODS[slug] ?? DEFAULT_NEIGHBORHOOD;
   return {
     title: `${n.name} Neighborhood Guide | Dynasty Real Estate`,
     description: `${n.tagline} — ${n.description.slice(0, 130)}...`,
   };
 }
 
-export default function NeighborhoodPage({ params }: { params: { slug: string } }) {
-  const n = NEIGHBORHOODS[params.slug] ?? { ...DEFAULT_NEIGHBORHOOD, name: params.slug.replace(/-/g, ' ') };
+export default async function NeighborhoodPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const n = NEIGHBORHOODS[slug] ?? { ...DEFAULT_NEIGHBORHOOD, name: slug.replace(/-/g, ' ') };
 
   return (
     <>
@@ -157,7 +159,7 @@ export default function NeighborhoodPage({ params }: { params: { slug: string } 
           {/* Lead form sidebar */}
           <div>
             <LeadForm
-              source={`neighborhood-${params.slug}`}
+              source={`neighborhood-${slug}`}
               heading={`Interested in ${n.name}?`}
               subheading="Connect with an agent who knows this neighborhood inside and out."
               showTimeline

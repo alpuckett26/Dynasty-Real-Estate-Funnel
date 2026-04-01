@@ -24,8 +24,8 @@ function getOpenHouseData(eventId: string) {
   };
 }
 
-export default function OpenHousePage({ params }: { params: { 'event-id': string } }) {
-  const eventId = params['event-id'];
+export default async function OpenHousePage({ params }: { params: Promise<{ 'event-id': string }> }) {
+  const { 'event-id': eventId } = await params;
   const event = getOpenHouseData(eventId);
 
   return (

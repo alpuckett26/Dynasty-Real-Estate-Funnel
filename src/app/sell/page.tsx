@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CheckCircle, TrendingUp, Camera, BarChart2, Users, Clock } from 'lucide-react';
 import { ValuationForm } from '@/components/forms/ValuationForm';
+import { ScrollToTopButton } from '@/components/ui/ScrollToTopButton';
 
 export const metadata: Metadata = {
   title: 'Sell Your Home | Get a Free Home Valuation',
@@ -130,9 +131,9 @@ export default function SellPage() {
         <div className="container-narrow text-center">
           <h2 className="font-serif text-3xl font-bold text-white">Ready to sell?</h2>
           <p className="mt-3 text-brand-100">Get your free home valuation today — no commitment required.</p>
-          <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="mt-6 inline-block rounded-xl bg-white px-8 py-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 transition-colors">
+          <ScrollToTopButton className="mt-6 inline-block rounded-xl bg-white px-8 py-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 transition-colors">
             Get My Free Valuation
-          </a>
+          </ScrollToTopButton>
         </div>
       </section>
     </>

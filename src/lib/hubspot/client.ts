@@ -48,14 +48,14 @@ export async function findContactByEmailOrPhone(
         filterGroups: [
           {
             filters: [
-              { propertyName: 'phone', operator: 'EQ', value: phone },
+              { propertyName: 'phone', operator: 'EQ' as never, value: phone },
             ],
           },
         ],
         sorts: [],
         properties: ['id'],
         limit: 1,
-        after: 0,
+        after: '0',
       });
       if (searchResult.results.length > 0) {
         return searchResult.results[0].id;
@@ -114,13 +114,13 @@ export async function createDeal(
 ): Promise<string> {
   const client = getClient();
   const result = await client.crm.deals.basicApi.create({
-    properties: flattenProperties(properties as Record<string, unknown>),
+    properties: flattenProperties(properties),
     associations: [
       {
         to: { id: contactId },
         types: [
           {
-            associationCategory: 'HUBSPOT_DEFINED',
+            associationCategory: 'HUBSPOT_DEFINED' as never,
             associationTypeId: 3, // contact-to-deal
           },
         ],
@@ -161,7 +161,7 @@ export async function createTask(
         to: { id: contactId },
         types: [
           {
-            associationCategory: 'HUBSPOT_DEFINED',
+            associationCategory: 'HUBSPOT_DEFINED' as never,
             associationTypeId: 204, // task-to-contact
           },
         ],
@@ -188,7 +188,7 @@ export async function createNote(
         to: { id: contactId },
         types: [
           {
-            associationCategory: 'HUBSPOT_DEFINED',
+            associationCategory: 'HUBSPOT_DEFINED' as never,
             associationTypeId: 202, // note-to-contact
           },
         ],
@@ -200,7 +200,7 @@ export async function createNote(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function flattenProperties(obj: Record<string, unknown>): Record<string, string> {
+function flattenProperties(obj: object): Record<string, string> {
   const flat: Record<string, string> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (v !== undefined && v !== null) {

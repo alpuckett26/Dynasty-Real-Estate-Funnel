@@ -13,7 +13,7 @@ import { runCRMActionAgent } from './crm-action-agent';
 import { runNurtureAgent } from './nurture-agent';
 import { createAuditEntry } from '@/lib/utils/audit';
 import type { SupervisorState, SupervisorDecision, AgentName } from '@/types/agent';
-import type { InboundCaptureEvent, ConversationMessage } from '@/types/lead';
+import type { InboundCaptureEvent, ConversationMessage, LeadContact } from '@/types/lead';
 
 export function createSession(): SupervisorState {
   return {
@@ -153,7 +153,7 @@ async function runQualificationAndCRM(state: SupervisorState): Promise<void> {
 
 async function notifyAgentOfHotLead(
   contactId: string,
-  contact: Record<string, unknown>,
+  contact: LeadContact,
   score: number
 ): Promise<void> {
   // TODO: Wire to Slack webhook, email alert, or SMS via Twilio

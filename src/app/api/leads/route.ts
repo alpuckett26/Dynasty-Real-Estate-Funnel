@@ -72,10 +72,23 @@ export async function POST(req: NextRequest) {
 
     // Score for immediate response customisation
     const score = scoreLeadFromForm({
-      ...data,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email ?? '',
+      phone: data.phone ?? '',
+      intent: data.intent,
+      areasOfInterest: data.areasOfInterest ?? '',
+      timeline: data.timeline,
+      financingStatus: data.financingStatus,
+      budgetMin: data.budgetMin,
+      budgetMax: data.budgetMax,
+      message: data.message,
       consentSms: data.consentSms,
       consentEmail: data.consentEmail,
       source: data.source as 'form',
+      utmSource: data.utmSource,
+      utmMedium: data.utmMedium,
+      utmCampaign: data.utmCampaign,
     });
 
     return NextResponse.json({

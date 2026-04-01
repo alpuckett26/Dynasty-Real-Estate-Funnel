@@ -11,7 +11,7 @@
     "setup:hubspot": "npx ts-node --project tsconfig.json scripts/setup-hubspot.ts"
   },
   "dependencies": {
-    "next": "14.2.5",
+    "next": "15.5.14",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "openai": "^4.52.7",
@@ -35,6 +35,6 @@
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
     "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.5"
+    "eslint-config-next": "15.5.14"
   }
 }
