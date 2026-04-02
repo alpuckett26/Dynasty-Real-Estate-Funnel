@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CheckCircle, Search, Shield, HeartHandshake, Key, Calendar } from 'lucide-react';
 import { LeadForm } from '@/components/forms/LeadForm';
+import { RatesWidget } from '@/components/ui/RatesWidget';
 
 export const metadata: Metadata = {
   title: 'Buy a Home | Expert Buyer Representation',
@@ -62,7 +63,9 @@ export default function BuyPage() {
             </div>
           </div>
 
-          <LeadForm
+          <div className="space-y-5">
+            <RatesWidget variant="card" showCTA={false} />
+            <LeadForm
             source="buy-page"
             intent="buyer"
             heading="Start Your Home Search"
@@ -72,7 +75,8 @@ export default function BuyPage() {
             showMessage
             ctaLabel="Connect Me with a Buyer Agent"
             className="shadow-2xl"
-          />
+            />
+          </div>
         </div>
       </section>
 

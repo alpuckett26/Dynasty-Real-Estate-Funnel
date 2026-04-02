@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { StickyCTA } from '@/components/layout/StickyCTA';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PixelScripts } from '@/components/layout/PixelScripts';
+import { RatesWidget } from '@/components/ui/RatesWidget';
 
 export const metadata: Metadata = {
   title: {
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <PixelScripts />
+        <RatesWidget variant="banner" />
         <Header />
         <main className="min-h-screen">{children}</main>
         <Footer />

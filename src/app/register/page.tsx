@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CheckCircle, Shield, DollarSign, Home, Users } from 'lucide-react';
 import { IntakeForm } from '@/components/forms/IntakeForm';
+import { RatesWidget } from '@/components/ui/RatesWidget';
 
 export const metadata: Metadata = {
   title: 'First-Time Homebuyer & Healthcare Worker Program | Dynasty Real Estate',
@@ -70,14 +71,17 @@ export default function RegisterPage() {
             </ul>
           </div>
 
-          <IntakeForm
+          <div className="space-y-5">
+            <RatesWidget variant="card" showCTA={false} />
+            <IntakeForm
             source="register-fthb"
             defaultIntent="buyer"
             heading="Register for Free"
             subheading="Takes 2 minutes. We respond within 5 minutes during business hours."
             ctaLabel="Register & Book My Consultation"
             className="shadow-2xl"
-          />
+            />
+          </div>
         </div>
       </section>
 

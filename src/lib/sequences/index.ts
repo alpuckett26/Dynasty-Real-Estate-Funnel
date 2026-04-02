@@ -254,19 +254,24 @@ Want us to check what you qualify for? Book a call: {calendlyUrl}
     {
       delayHours: 336,
       channel: 'email',
-      subject: 'Market update: what\'s happening in your target area',
+      subject: 'This week\'s mortgage rates + market update',
       body: `Hi {firstName},
 
-Here's a quick snapshot of the current market:
+This week's mortgage rates (Freddie Mac PMMS):
 
-The market is active. Homes in the $200K–$400K range are moving fast — often with multiple offers in the first week. Above $500K, buyers have more negotiating room.
+  30-year fixed:  {rate30yr}
+  15-year fixed:  {rate15yr}
+  5/1 ARM:        {rate5arm}
 
-What this means for you as a 3–6 month buyer:
-- Start your pre-approval now so you're ready to move when you find the right home
-- Get familiar with the market by touring even before you're "ready" — it calibrates expectations fast
-- Don't wait for rates to drop to start looking. Rates change; the right home is harder to time.
+{rateChange}
 
-We're watching the market daily. When you're ready to get serious, we're a call away: {calendlyUrl}
+Here's what this means for you as a buyer planning ahead:
+
+The market is active in most price ranges. Homes under $400K are moving fast — often with multiple offers in the first week. Above $500K, buyers typically have more room to negotiate.
+
+Don't wait for rates to drop before you start looking. Your purchasing power is largely set by your pre-approval. Locking in with the right lender now — even if you close in 3–6 months — gives you options.
+
+Want us to connect you with a lender who can show you your exact numbers? {calendlyUrl}
 
 — The Dynasty Team`,
     },
