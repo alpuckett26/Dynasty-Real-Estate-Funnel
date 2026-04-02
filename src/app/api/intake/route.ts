@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { upsertContact, createNote, createTask } from '@/lib/hubspot/client';
 import { notifyHotLead } from '@/lib/notifications/slack';
+import { enrollLead } from '@/lib/sequences/runner';
 import { scoreLead, getTaskDueDateMs } from '@/lib/scoring/lead-scorer';
 import type { HubSpotContactProperties, PipelineStage } from '@/types/crm';
 
@@ -129,9 +130,9 @@ export async function POST(req: NextRequest) {
       dueDate: getTaskDueDateMs(scoreResult.route),
     });
 
-    // ── Hot lead Slack alert ──────────────────────────────────────────────────
+    // ── Hot lead alert (Slack + SMS to Adreanne) ─────────────────────────────
     if (scoreResult.route === 'hot') {
-      await notifyHotLead({
+      notifyHotLead({
         name: `${data.firstName} ${data.lastName}`,
         phone: data.phone,
         email: data.email,
@@ -142,6 +143,17 @@ export async function POST(req: NextRequest) {
         contactId,
       }).catch(console.error);
     }
+
+    // ── Enroll in nurture sequence (step 0 fires instantly) ───────────────────
+    enrollLead({
+      contactId,
+      firstName: data.firstName,
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      tags,
+      consentEmail: data.consentEmail,
+      consentSms: data.consentSms,
+    }).catch(console.error);
 
     return NextResponse.json({
       success: true,

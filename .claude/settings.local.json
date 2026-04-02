@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run:*)",
       "Bash(curl:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

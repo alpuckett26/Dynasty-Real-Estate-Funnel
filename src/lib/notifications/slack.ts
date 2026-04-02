@@ -1,8 +1,9 @@
 /**
- * Slack hot-lead alert
- * Set SLACK_WEBHOOK_URL in your environment to enable.
- * Get one at: https://api.slack.com/messaging/webhooks
+ * Hot-lead alerts — Slack Block Kit + direct SMS to owner via Twilio
+ * Set SLACK_WEBHOOK_URL and/or OWNER_PHONE in your environment to enable.
  */
+
+import { alertOwner } from '@/lib/sms/twilio';
 
 interface HotLeadPayload {
   name: string;
@@ -16,8 +17,12 @@ interface HotLeadPayload {
 }
 
 export async function notifyHotLead(payload: HotLeadPayload): Promise<void> {
+  // 1. SMS Adreanne directly
+  const smsBody = `🔥 HOT LEAD — Dynasty\n${payload.name}\n${payload.phone ?? payload.email ?? 'No contact'}\nIntent: ${capitalise(payload.intent)} | Score: ${payload.score}\nCall NOW → HubSpot: https://app.hubspot.com/contacts/${process.env.HUBSPOT_PORTAL_ID}/contact/${payload.contactId}`;
+  await alertOwner(smsBody);
+
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-  if (!webhookUrl) return; // silently skip if not configured
+  if (!webhookUrl) return;
 
   const portalId = process.env.HUBSPOT_PORTAL_ID;
   const hubspotLink = portalId

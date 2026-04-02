@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { handleInboundEvent } from '@/lib/agents/supervisor';
 import { scoreLeadFromForm } from '@/lib/scoring/lead-scorer';
+import { enrollLead } from '@/lib/sequences/runner';
 import type { InboundCaptureEvent } from '@/types/lead';
 
 const LeadSubmitSchema = z.object({
@@ -91,6 +92,17 @@ export async function POST(req: NextRequest) {
       utmCampaign: data.utmCampaign,
     });
 
+    // ── Enroll in nurture sequence ────────────────────────────────────────────
+    enrollLead({
+      contactId: result.hubspotContactId,
+      firstName: data.firstName,
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      tags: [`Intent: ${capitalise(data.intent)}`, `Lead Source: ${data.source}`],
+      consentEmail: data.consentEmail,
+      consentSms: data.consentSms,
+    }).catch(console.error);
+
     return NextResponse.json({
       success: true,
       sessionId: result.sessionId,
@@ -105,10 +117,14 @@ export async function POST(req: NextRequest) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid form data', details: err.errors }, { status: 400 });
     }
-    console.error('[LeadAPI]', err);
+    console.error('[LeadsAPI]', err);
     return NextResponse.json(
       { error: 'Something went wrong. Please try again.' },
       { status: 500 }
     );
   }
+}
+
+function capitalise(str: string): string {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 }

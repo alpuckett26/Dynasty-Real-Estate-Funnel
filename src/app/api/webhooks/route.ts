@@ -10,9 +10,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { handleInboundEvent } from '@/lib/agents/supervisor';
 import { runNurtureAgent } from '@/lib/agents/nurture-agent';
+import { enrollLead } from '@/lib/sequences/runner';
+import { sendSMS } from '@/lib/sms/twilio';
+import { sendEmail } from '@/lib/email/resend';
 import { createHmac } from 'crypto';
 import { findContactByEmailOrPhone, updateContact } from '@/lib/hubspot/client';
-import { selectSequence } from '@/lib/sequences';
 import type { InboundCaptureEvent } from '@/types/lead';
 
 function verifyHmacSignature(body: string, signature: string): boolean {
@@ -181,22 +183,57 @@ export async function POST(req: NextRequest) {
         },
       };
       const result = await handleInboundEvent(event);
+
+      // Send immediate open house follow-up + enroll in buyer sequence
+      const address = payload.propertyAddress ? ` at ${payload.propertyAddress}` : '';
+      const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://dynasty-real-estate-funnel.vercel.app/book';
+
+      if (payload.consentSms && payload.phone) {
+        sendSMS(payload.phone, `Hi ${payload.firstName}! Thanks for visiting us today${address}. I'd love to answer any questions or schedule a private showing. Book a quick call here: ${calendlyUrl} — Adreanne, Dynasty Real Estate`).catch(console.error);
+      } else if (payload.consentEmail && payload.email) {
+        sendEmail({
+          to: payload.email,
+          subject: `Thanks for visiting${address} today`,
+          text: `Hi ${payload.firstName},\n\nThank you for stopping by today${address}. We hope you loved it!\n\nIf you have any questions or want to schedule a private showing, book a quick call here: ${calendlyUrl}\n\nWe'd love to help you find your perfect home.\n\n— Adreanne & The Dynasty Team`,
+        }).catch(console.error);
+      }
+
+      // Enroll in buyer warm sequence for ongoing nurture
+      enrollLead({
+        contactId: result.hubspotContactId,
+        firstName: payload.firstName,
+        email: payload.email,
+        phone: payload.phone,
+        tags: ['Intent: Buyer', 'Lead Source: open-house'],
+        consentEmail: payload.consentEmail,
+        consentSms: payload.consentSms,
+      }).catch(console.error);
+
       return NextResponse.json({ ok: true, ...result });
     }
 
     if (payload.type === 'reactivation_batch') {
       const results = await Promise.allSettled(
-        payload.contacts.map((c) =>
-          runNurtureAgent({
+        payload.contacts.map(async (c) => {
+          const result = await runNurtureAgent({
             contactId: c.contactId,
             currentStage: c.stage,
             daysSinceLastInteraction: c.daysSinceLastInteraction,
-            leadRoute: c.leadRoute,
+            leadRoute: c.leadRoute as 'hot' | 'warm' | 'cold',
             preferredChannel: c.preferredChannel,
-            consent: { email: c.consentEmail, sms: c.consentSms },
+            consent: { email: c.consentEmail, sms: c.consentSms, dm: false },
             context: c.context,
-          })
-        )
+          });
+          if (result.shouldSend && result.body) {
+            if (result.channel === 'sms') {
+              const phone = payload.contacts.find((x) => x.contactId === c.contactId);
+              if (phone) await sendSMS(c.contactId, result.body).catch(console.error);
+            } else if (result.channel === 'email' && result.body) {
+              await sendEmail({ to: c.contactId, subject: result.subject ?? 'Checking in — Dynasty', text: result.body }).catch(console.error);
+            }
+          }
+          return result;
+        })
       );
 
       const summary = results.map((r, i) => ({

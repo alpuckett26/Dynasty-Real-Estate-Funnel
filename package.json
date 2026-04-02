@@ -11,30 +11,32 @@
     "setup:hubspot": "npx ts-node --project tsconfig.json scripts/setup-hubspot.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@hubspot/api-client": "^11.2.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.414.0",
     "next": "15.5.14",
+    "openai": "^4.52.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "openai": "^4.52.7",
-    "@hubspot/api-client": "^11.2.0",
-    "zod": "^3.23.8",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.4.0",
     "react-hook-form": "^7.52.1",
-    "@hookform/resolvers": "^3.9.0",
-    "lucide-react": "^0.414.0",
-    "date-fns": "^3.6.0",
-    "uuid": "^10.0.0"
+    "resend": "^6.10.0",
+    "tailwind-merge": "^2.4.0",
+    "twilio": "^5.13.1",
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/uuid": "^10.0.0",
-    "typescript": "^5.5.3",
-    "tailwindcss": "^3.4.6",
     "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.39",
     "eslint": "^8.57.0",
-    "eslint-config-next": "15.5.14"
+    "eslint-config-next": "15.5.14",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.5.3"
   }
 }
