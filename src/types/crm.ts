@@ -1,6 +1,13 @@
 // HubSpot pipeline stages (in order)
 export const PIPELINE_STAGES = [
   'new_lead',
+  'registered',
+  'consultation_not_booked',
+  'consultation_scheduled',
+  'needs_lender',
+  'needs_credit_repair',
+  'buyer_active',
+  'seller_active',
   'attempted_contact',
   'qualified_buyer',
   'qualified_seller',
@@ -9,9 +16,9 @@ export const PIPELINE_STAGES = [
   'consultation_complete',
   'active_client',
   'under_contract',
+  'nurture_long_term',
   'closed_won',
   'closed_lost',
-  'nurture_long_term',
 ] as const;
 
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
@@ -30,11 +37,28 @@ export interface HubSpotContactProperties {
   budget_min?: number;
   budget_max?: number;
   timeline?: '0-3m' | '3-6m' | '6-12m' | '12m+';
-  financing_status?: 'Pre-approved' | 'Not yet' | 'Cash' | 'Unknown';
+  financing_status?: 'Pre-approved' | 'Needs Lender' | 'Needs DPA' | 'Needs Credit Repair' | 'Not yet' | 'Cash' | 'Unknown';
   motivation_score?: number;
   urgency_score?: number;
   total_lead_score?: number;
   lead_route?: 'Hot' | 'Warm' | 'Cold' | 'Partner';
+
+  // Custom – Programs & Segmentation
+  first_time_homebuyer?: boolean;
+  healthcare_worker?: boolean;
+  program_type?: string;
+  contact_preference?: 'Call' | 'Text' | 'Email';
+  needs_credit_repair?: boolean;
+  needs_lender_referral?: boolean;
+  needs_dpa?: boolean;
+  need_to_sell_first?: boolean;
+  bedrooms_desired?: string;
+  lease_expiration?: string;
+  property_address?: string;
+  already_listed?: boolean;
+  buying_after_selling?: boolean;
+  consultation_status?: 'Not Booked' | 'Booked' | 'Completed';
+  hs_lead_status?: string; // native HubSpot field for pipeline stage label
 
   // Custom – Channel
   channel_source?: string;

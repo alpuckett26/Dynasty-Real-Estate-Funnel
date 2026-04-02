@@ -9,9 +9,21 @@ export type TimelineBucket =
 
 export type FinancingStatus =
   | 'pre-approved'
+  | 'need-lender'
+  | 'need-dpa'
+  | 'need-credit-repair'
   | 'not-yet'
   | 'cash'
   | 'unknown';
+
+export type ContactPreference = 'call' | 'text' | 'email';
+
+export type IntakeTimeline =
+  | 'now'
+  | '30-60d'
+  | '3-6m'
+  | '6m+'
+  | 'researching';
 
 export type LeadRoute = 'hot' | 'warm' | 'cold' | 'partner';
 
@@ -114,4 +126,50 @@ export interface LeadFormData {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+}
+
+/** Extended intake form — used for landing page funnels */
+export interface IntakeFormData {
+  // Contact
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  contactPreference: ContactPreference;
+
+  // Intent
+  intent: LeadType;
+  firstTimeHomebuyer: boolean;
+  healthcareWorker: boolean;
+
+  // Location + timeline
+  areasOfInterest: string;
+  timeline: IntakeTimeline;
+
+  // Financial readiness
+  financingStatus: FinancingStatus;
+
+  // Buyer details
+  budgetMin?: number;
+  budgetMax?: number;
+  bedrooms?: string;
+  leaseExpiration?: string;
+  needToSellFirst: boolean;
+
+  // Seller details
+  needsValuation: boolean;
+  alreadyListed: boolean;
+  propertyAddress?: string;
+  buyingAfterSelling: boolean;
+
+  // Consent + source
+  consentSms: boolean;
+  consentEmail: boolean;
+  source: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+
+  // Derived tags (set server-side)
+  tags?: string[];
 }

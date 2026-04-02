@@ -12,6 +12,7 @@ import { runQualificationAgent } from './qualification-agent';
 import { runCRMActionAgent } from './crm-action-agent';
 import { runNurtureAgent } from './nurture-agent';
 import { createAuditEntry } from '@/lib/utils/audit';
+import { notifyHotLead } from '@/lib/notifications/slack';
 import type { SupervisorState, SupervisorDecision, AgentName } from '@/types/agent';
 import type { InboundCaptureEvent, ConversationMessage, LeadContact } from '@/types/lead';
 
@@ -156,8 +157,16 @@ async function notifyAgentOfHotLead(
   contact: LeadContact,
   score: number
 ): Promise<void> {
-  // TODO: Wire to Slack webhook, email alert, or SMS via Twilio
-  console.log('[HOT LEAD ALERT]', { contactId, contact, score });
+  await notifyHotLead({
+    name: `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim() || 'Unknown',
+    phone: contact.phone,
+    email: contact.email,
+    intent: 'unknown',
+    score,
+    tags: [],
+    source: 'website-chat',
+    contactId,
+  });
 }
 
 export function decide(state: SupervisorState): SupervisorDecision {

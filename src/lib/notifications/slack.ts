@@ -1,0 +1,85 @@
+/**
+ * Slack hot-lead alert
+ * Set SLACK_WEBHOOK_URL in your environment to enable.
+ * Get one at: https://api.slack.com/messaging/webhooks
+ */
+
+interface HotLeadPayload {
+  name: string;
+  phone?: string;
+  email?: string;
+  intent: string;
+  score: number;
+  tags: string[];
+  source: string;
+  contactId: string;
+}
+
+export async function notifyHotLead(payload: HotLeadPayload): Promise<void> {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  if (!webhookUrl) return; // silently skip if not configured
+
+  const portalId = process.env.HUBSPOT_PORTAL_ID;
+  const hubspotLink = portalId
+    ? `https://app.hubspot.com/contacts/${portalId}/contact/${payload.contactId}`
+    : null;
+
+  const blocks = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: '🔥 Hot Lead Alert — Dynasty Real Estate', emoji: true },
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: `*Name:*\n${payload.name}` },
+        { type: 'mrkdwn', text: `*Intent:*\n${capitalise(payload.intent)}` },
+        { type: 'mrkdwn', text: `*Phone:*\n${payload.phone ?? 'N/A'}` },
+        { type: 'mrkdwn', text: `*Email:*\n${payload.email ?? 'N/A'}` },
+        { type: 'mrkdwn', text: `*Lead Score:*\n${payload.score}` },
+        { type: 'mrkdwn', text: `*Source:*\n${payload.source}` },
+      ],
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Tags:* ${payload.tags.join(' · ')}`,
+      },
+    },
+    ...(hubspotLink
+      ? [
+          {
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                text: { type: 'plain_text', text: 'View in HubSpot', emoji: true },
+                url: hubspotLink,
+                style: 'primary',
+              },
+            ],
+          },
+        ]
+      : []),
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `Submitted ${new Date().toLocaleString()} · Respond within 30 minutes for best conversion`,
+        },
+      ],
+    },
+  ];
+
+  await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blocks }),
+  });
+}
+
+function capitalise(str: string) {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+}

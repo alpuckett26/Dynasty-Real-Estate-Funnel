@@ -33,6 +33,9 @@ const FINANCING_SCORES: Record<FinancingStatus, number> = {
   'pre-approved': 20,
   cash: 20,
   'not-yet': 5,
+  'need-lender': 5,
+  'need-dpa': 5,
+  'need-credit-repair': 2,
   unknown: 0,
 };
 
