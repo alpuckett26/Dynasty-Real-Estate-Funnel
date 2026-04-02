@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { handleInboundEvent } from '@/lib/agents/supervisor';
 import { runNurtureAgent } from '@/lib/agents/nurture-agent';
 import { createHmac } from 'crypto';
+import { findContactByEmailOrPhone, updateContact } from '@/lib/hubspot/client';
+import { selectSequence } from '@/lib/sequences';
 import type { InboundCaptureEvent } from '@/types/lead';
 
 function verifyHmacSignature(body: string, signature: string): boolean {
@@ -69,11 +71,27 @@ const ReactivationPayload = z.object({
   ),
 });
 
+// Calendly fires this when an invitee books or cancels
+const CalendlyPayload = z.object({
+  type: z.literal('calendly'),
+  event: z.enum(['invitee.created', 'invitee.canceled']),
+  payload: z.object({
+    invitee: z.object({
+      name: z.string().optional(),
+      email: z.string().email(),
+    }),
+    event_type: z.object({
+      name: z.string().optional(),
+    }).optional(),
+  }),
+});
+
 const WebhookPayload = z.discriminatedUnion('type', [
   ManyChatPayload,
   CallRailPayload,
   OpenHousePayload,
   ReactivationPayload,
+  CalendlyPayload,
 ]);
 
 export async function POST(req: NextRequest) {
@@ -188,6 +206,21 @@ export async function POST(req: NextRequest) {
       }));
 
       return NextResponse.json({ ok: true, processed: summary.length, summary });
+    }
+
+    if (payload.type === 'calendly') {
+      const email = payload.payload.invitee.email;
+      const booked = payload.event === 'invitee.created';
+
+      const contactId = await findContactByEmailOrPhone(email);
+      if (contactId) {
+        await updateContact(contactId, {
+          consultation_status: booked ? 'Booked' : 'Not Booked',
+          last_meaningful_interaction: new Date().toISOString(),
+        });
+      }
+
+      return NextResponse.json({ ok: true, action: booked ? 'consultation_booked' : 'consultation_canceled', contactId });
     }
 
     return NextResponse.json({ error: 'Unknown event type' }, { status: 400 });

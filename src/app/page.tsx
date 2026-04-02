@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, Star, Home, TrendingUp, MapPin, CheckCircle } from 'lucide-react';
+import { ArrowRight, Star, Home, TrendingUp, MapPin, CheckCircle, Shield, HeartPulse, Wrench } from 'lucide-react';
 import { LeadForm } from '@/components/forms/LeadForm';
 
 export const metadata: Metadata = {
@@ -126,6 +126,61 @@ export default function HomePage() {
                 <p className="text-gray-600 text-sm leading-relaxed mb-4">{s.desc}</p>
                 <span className="text-sm font-semibold text-brand-600 group-hover:gap-2 flex items-center gap-1 transition-all">
                   {s.cta} <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Programs */}
+      <section className="py-20 bg-navy-950">
+        <div className="container-wide">
+          <div className="text-center mb-12">
+            <h2 className="font-serif text-3xl font-bold text-white md:text-4xl">Special programs available</h2>
+            <p className="mt-3 text-lg text-navy-300">You may qualify for more than you think.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                href: '/register',
+                icon: Home,
+                badge: 'Down Payment Assistance',
+                title: 'First-Time Homebuyer Program',
+                desc: 'Grants and assistance programs that can cover up to $15,000 of your down payment and closing costs.',
+                cta: 'Check My Eligibility',
+                color: 'bg-blue-500',
+              },
+              {
+                href: '/register',
+                icon: HeartPulse,
+                badge: 'Healthcare Grants',
+                title: 'Healthcare Worker Program',
+                desc: 'Nurses, doctors, EMTs, and other healthcare professionals qualify for exclusive grants and reduced fees.',
+                cta: 'See What I Qualify For',
+                color: 'bg-green-500',
+              },
+              {
+                href: '/get-ready',
+                icon: Wrench,
+                badge: 'Credit Repair Path',
+                title: 'Not Quite Ready Yet?',
+                desc: "Credit needs work? No down payment saved? We have a structured path that gets buyers from today to keys in 6–12 months.",
+                cta: 'Start My Path',
+                color: 'bg-brand-500',
+              },
+            ].map((p) => (
+              <Link key={p.title} href={p.href} className="group rounded-2xl bg-navy-800 p-6 ring-1 ring-navy-700 hover:ring-brand-500 transition-all">
+                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${p.color} mb-4`}>
+                  <p.icon className="h-5 w-5 text-white" />
+                </div>
+                <span className="inline-block rounded-full bg-navy-700 px-2.5 py-1 text-xs font-medium text-navy-300 mb-3">
+                  {p.badge}
+                </span>
+                <h3 className="text-lg font-serif font-bold text-white mb-2">{p.title}</h3>
+                <p className="text-sm text-navy-300 leading-relaxed mb-4">{p.desc}</p>
+                <span className="text-sm font-semibold text-brand-400 group-hover:gap-2 flex items-center gap-1 transition-all">
+                  {p.cta} <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </Link>
             ))}

@@ -25,17 +25,32 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Links */}
+          {/* Services */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Services</p>
             <ul className="space-y-2.5 text-sm">
               {[
                 { href: '/buy', label: 'Buy a Home' },
-                { href: '/sell', label: 'Sell Your Home' },
+                { href: '/sell-your-home', label: 'Sell Your Home' },
                 { href: '/relocate', label: 'Relocation Services' },
                 { href: '/book', label: 'Book a Consultation' },
               ].map((l) => (
                 <li key={l.href}>
+                  <Link href={l.href} className="hover:text-white transition-colors">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mt-6 mb-4">Programs</p>
+            <ul className="space-y-2.5 text-sm">
+              {[
+                { href: '/register', label: 'First-Time Homebuyer' },
+                { href: '/register', label: 'Healthcare Worker' },
+                { href: '/get-ready', label: 'Credit Repair Path' },
+                { href: '/sell-your-home', label: 'Free Home Valuation' },
+              ].map((l) => (
+                <li key={l.label}>
                   <Link href={l.href} className="hover:text-white transition-colors">
                     {l.label}
                   </Link>
