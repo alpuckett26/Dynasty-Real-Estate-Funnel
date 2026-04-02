@@ -59,22 +59,36 @@ export async function runCRMActionAgent(
     utm_campaign: campaignMetadata?.utm_campaign,
   };
 
-  // Upsert contact
-  const { contactId, action } = await upsertContact(contactProps);
-
-  // Create deal for hot/warm leads
-  let dealId: string | undefined;
-  if (qualification.route !== 'cold' && qualification.route !== 'partner') {
-    const stage = stagFromRoute(qualification.route, qualification.leadType);
-    const dealName = `${contact.firstName ?? 'Unknown'} ${contact.lastName ?? ''} — ${capitalise(qualification.leadType)} Lead`.trim();
-    dealId = await createDeal(contactId, {
-      dealname: dealName,
-      dealstage: stage,
-      pipeline: PIPELINE_ID,
-    });
+  // Upsert contact — fall back to standard props only if custom props aren't set up yet
+  let contactId: string;
+  let action: 'created' | 'updated';
+  try {
+    ({ contactId, action } = await upsertContact(contactProps));
+  } catch (err) {
+    const standardProps: HubSpotContactProperties = {
+      firstname: contact.firstName,
+      lastname: contact.lastName,
+      email: contact.email,
+      phone: contact.phone,
+    };
+    ({ contactId, action } = await upsertContact(standardProps));
   }
 
-  // Create CRM note with AI summary
+  // Create deal for hot/warm leads (non-blocking)
+  let dealId: string | undefined;
+  if (qualification.route !== 'cold' && qualification.route !== 'partner') {
+    try {
+      const stage = stagFromRoute(qualification.route, qualification.leadType);
+      const dealName = `${contact.firstName ?? 'Unknown'} ${contact.lastName ?? ''} — ${capitalise(qualification.leadType)} Lead`.trim();
+      dealId = await createDeal(contactId, {
+        dealname: dealName,
+        dealstage: stage,
+        pipeline: PIPELINE_ID,
+      });
+    } catch { /* deal creation optional */ }
+  }
+
+  // Create CRM note with AI summary (non-blocking)
   const noteBody = `
 [AI SUMMARY — ${new Date().toLocaleDateString()}]
 ${qualification.crmSummary}
@@ -87,9 +101,9 @@ ${qualification.handoffRequired ? `\n⚠️ HANDOFF REQUIRED: ${qualification.ha
 Recommended Next Action: ${qualification.recommendedNextAction}
   `.trim();
 
-  await createNote(contactId, noteBody);
+  try { await createNote(contactId, noteBody); } catch { /* non-critical */ }
 
-  // Create follow-up task
+  // Create follow-up task (non-blocking)
   const taskLabel =
     qualification.route === 'hot'
       ? '🔥 HOT LEAD — Call immediately'
@@ -97,13 +111,15 @@ Recommended Next Action: ${qualification.recommendedNextAction}
       ? 'Follow up with warm lead'
       : 'Add to nurture sequence';
 
-  await createTask(contactId, {
-    subject: taskLabel,
-    body: `${qualification.recommendedNextAction}\n\nLead Score: ${qualification.totalScore}`,
-    status: 'NOT_STARTED',
-    taskType: 'CALL',
-    dueDate: getTaskDueDateMs(qualification.route),
-  });
+  try {
+    await createTask(contactId, {
+      subject: taskLabel,
+      body: `${qualification.recommendedNextAction}\n\nLead Score: ${qualification.totalScore}`,
+      status: 'NOT_STARTED',
+      taskType: 'CALL',
+      dueDate: getTaskDueDateMs(qualification.route),
+    });
+  } catch { /* non-critical */ }
 
   return {
     hubspotContactId: contactId,

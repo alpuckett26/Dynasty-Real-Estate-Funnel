@@ -19,7 +19,7 @@ export function StickyCTA() {
     <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-200 shadow-2xl">
       <div className="flex items-center divide-x divide-gray-200">
         <a
-          href="tel:+15553962789"
+          href="tel:+12252846854"
           className="flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <Phone className="h-5 w-5 text-brand-600" />

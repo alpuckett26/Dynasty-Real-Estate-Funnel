@@ -95,11 +95,11 @@ async function ThankYouContent({
                 Our team will reach out within 5 minutes to confirm a time — or call us now.
               </p>
               <a
-                href="tel:+15553962789"
+                href="tel:+12252846854"
                 className="btn-primary w-full justify-center gap-2"
               >
                 <Phone className="h-4 w-4" />
-                Call Now: (555) DYN-ASTY
+                Call Now: (225) 284-6854
               </a>
               <p className="mt-4 text-xs text-gray-400">Mon–Sun, 7am–9pm</p>
             </div>

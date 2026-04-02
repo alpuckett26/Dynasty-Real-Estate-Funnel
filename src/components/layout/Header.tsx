@@ -73,11 +73,11 @@ export function Header() {
         {/* Desktop CTAs */}
         <div className="hidden md:flex items-center gap-3">
           <a
-            href="tel:+1-555-DYNASTY"
+            href="tel:+12252846854"
             className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-brand-600"
           >
             <Phone className="h-4 w-4" />
-            <span>(555) DYN-ASTY</span>
+            <span>(225) 284-6854</span>
           </a>
           <Link href="/book" className="btn-primary text-xs px-4 py-2">
             Book Free Consult
@@ -138,9 +138,9 @@ export function Header() {
           </div>
 
           <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
-            <a href="tel:+1-555-DYNASTY" className="flex items-center gap-2 text-sm text-gray-600">
+            <a href="tel:+12252846854" className="flex items-center gap-2 text-sm text-gray-600">
               <Phone className="h-4 w-4" />
-              (555) DYN-ASTY
+              (225) 284-6854
             </a>
             <Link href="/book" className="btn-primary text-center text-sm" onClick={() => setOpen(false)}>
               Book Free Consult

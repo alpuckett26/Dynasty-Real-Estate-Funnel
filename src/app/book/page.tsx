@@ -95,8 +95,8 @@ export default function BookPage() {
 
               <div className="mt-8 card bg-brand-50 border border-brand-200">
                 <p className="text-sm font-semibold text-brand-800 mb-1">Prefer to call us directly?</p>
-                <a href="tel:+15553962789" className="text-lg font-bold text-brand-700 hover:text-brand-800">
-                  (555) DYN-ASTY
+                <a href="tel:+12252846854" className="text-lg font-bold text-brand-700 hover:text-brand-800">
+                  (225) 284-6854
                 </a>
                 <p className="text-xs text-brand-600 mt-1">Mon–Sun, 7am–9pm</p>
               </div>
@@ -119,7 +119,7 @@ export default function BookPage() {
                     Set NEXT_PUBLIC_CALENDLY_URL in your environment to enable online booking.
                   </p>
                   <a
-                    href="tel:+15553962789"
+                    href="tel:+12252846854"
                     className="btn-primary mt-6"
                   >
                     Call to Schedule

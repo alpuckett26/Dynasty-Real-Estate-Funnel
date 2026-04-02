@@ -64,15 +64,15 @@ export function Footer() {
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Contact</p>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="tel:+15553962789" className="flex items-center gap-2 hover:text-white transition-colors">
+                <a href="tel:+12252846854" className="flex items-center gap-2 hover:text-white transition-colors">
                   <Phone className="h-4 w-4 flex-shrink-0" />
-                  (555) DYN-ASTY
+                  (225) 284-6854
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@dynastyrealestate.com" className="flex items-center gap-2 hover:text-white transition-colors">
+                <a href="mailto:adreanne@dynastypartnersllc.com" className="flex items-center gap-2 hover:text-white transition-colors">
                   <Mail className="h-4 w-4 flex-shrink-0" />
-                  hello@dynastyrealestate.com
+                  adreanne@dynastypartnersllc.com
                 </a>
               </li>
             </ul>
