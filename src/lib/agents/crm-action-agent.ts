@@ -10,7 +10,7 @@ import { getTaskDueDateMs } from '@/lib/scoring/lead-scorer';
 import type { CRMActionAgentInput, CRMActionAgentOutput } from '@/types/agent';
 import type { HubSpotContactProperties, PipelineStage } from '@/types/crm';
 
-const PIPELINE_ID = 'default'; // Replace with your HubSpot pipeline ID
+const PIPELINE_ID = process.env.HUBSPOT_PIPELINE_ID ?? 'default';
 
 function stagFromRoute(
   route: string,

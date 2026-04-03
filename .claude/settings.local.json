@@ -4,7 +4,9 @@
       "Bash(npm run:*)",
       "Bash(curl:*)",
       "Bash(npx vercel:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node scripts/setup-hubspot.mjs)",
+      "Bash(node -e ':*)"
     ]
   }
 }
