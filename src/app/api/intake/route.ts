@@ -166,9 +166,9 @@ export async function POST(req: NextRequest) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid form data', details: err.errors }, { status: 400 });
     }
-    const msg = err instanceof Error ? `${err.message} | ${err.stack?.split('\n')[1] ?? ''}` : String(err);
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[IntakeAPI] 500:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: 'Something went wrong. Please try again.', detail: msg }, { status: 500 });
   }
 }
 
