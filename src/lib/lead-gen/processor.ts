@@ -10,6 +10,7 @@ import { sendSMS } from '@/lib/sms/twilio';
 import { sendEmail } from '@/lib/email/resend';
 import { alertOwner } from '@/lib/sms/twilio';
 import type { CraigslistLead } from './sources/craigslist';
+import type { FsboComLead } from './sources/fsbo-com';
 import type { RedditLead } from './sources/reddit';
 
 const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://dynasty-real-estate-funnel.vercel.app/book';
@@ -68,6 +69,57 @@ export async function processCraigslistLeads(leads: CraigslistLead[]): Promise<P
       result.created++;
     } catch (err) {
       console.error('[LeadGen] Craigslist process error:', err);
+      result.errors++;
+    }
+  }
+
+  return result;
+}
+
+// ─── FSBO.com ────────────────────────────────────────────────────────────────
+
+export async function processFsboComLeads(leads: FsboComLead[]): Promise<ProcessResult> {
+  const result: ProcessResult = { source: 'fsbo-com', created: 0, skipped: 0, errors: 0 };
+
+  for (const lead of leads) {
+    try {
+      const existing = await findContactByEmailOrPhone(lead.email, lead.phone);
+      if (existing) { result.skipped++; continue; }
+
+      const contactId = await createContact({
+        firstname: 'FSBO Seller',
+        lastname: extractNameFromTitle(lead.title),
+        email: lead.email,
+        phone: lead.phone,
+        lead_type: 'Seller',
+        channel_source: 'fsbo-com' as never,
+        lead_route: 'Warm',
+        last_meaningful_interaction: new Date().toISOString(),
+      });
+
+      await createNote(contactId, [
+        `[FSBO LEAD — FSBO.com — ${new Date().toLocaleDateString()}]`,
+        `Title: ${lead.title}`,
+        lead.price ? `Asking: ${lead.price}` : '',
+        lead.address ? `Address: ${lead.address}` : '',
+        `URL: ${lead.url}`,
+        lead.description ? `\nListing text:\n${lead.description}` : '',
+      ].filter(Boolean).join('\n'));
+
+      if (lead.phone) {
+        const msg = `Hi! I'm Adreanne with Dynasty Real Estate. I saw your home listed on FSBO.com. Many sellers get significantly more by working with an agent — I'd love to show you the numbers. Free, no pressure. Can I give you a quick call? ${CALENDLY_URL}`;
+        await sendSMS(lead.phone, msg).catch(console.error);
+      } else if (lead.email) {
+        await sendEmail({
+          to: lead.email,
+          subject: 'Your FSBO listing — a quick note from Dynasty Real Estate',
+          text: `Hi,\n\nI came across your listing on FSBO.com and wanted to reach out. I'm Adreanne Aranha with Dynasty Real Estate.\n\nMost FSBO sellers end up netting more by working with an agent once you factor in pricing strategy, negotiation, and buyer agent commission structures. I'd love to walk you through the numbers — completely free, no pressure.\n\nCan we set up a quick 15-minute call? ${CALENDLY_URL}\n\nBest,\nAdreanne Aranha\nDynasty Real Estate\n(225) 284-6854`,
+        }).catch(console.error);
+      }
+
+      result.created++;
+    } catch (err) {
+      console.error('[LeadGen] FSBO.com process error:', err);
       result.errors++;
     }
   }

@@ -6,13 +6,15 @@
  *
  * Sources:
  * - Craigslist FSBO (seller leads with phone/email)
+ * - FSBO.com (seller leads — more volume, more serious sellers)
  * - Reddit intent signals (buyer/seller leads flagged for manual DM outreach)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeCraigslistFSBO } from '@/lib/lead-gen/sources/craigslist';
+import { scrapeFsboCom } from '@/lib/lead-gen/sources/fsbo-com';
 import { scanRedditForLeads } from '@/lib/lead-gen/sources/reddit';
-import { processCraigslistLeads, processRedditLeads } from '@/lib/lead-gen/processor';
+import { processCraigslistLeads, processFsboComLeads, processRedditLeads } from '@/lib/lead-gen/processor';
 import { alertOwner } from '@/lib/sms/twilio';
 
 export const runtime = 'nodejs';
@@ -37,6 +39,18 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[LeadGen] Craigslist failed:', err);
     results.push({ source: 'craigslist-fsbo', created: 0, skipped: 0, errors: 1 });
+  }
+
+  // ── FSBO.com ────────────────────────────────────────────────────────────────
+  try {
+    const fsboLeads = await scrapeFsboCom();
+    const fsboResult = await processFsboComLeads(fsboLeads);
+    results.push(fsboResult);
+    totalCreated += fsboResult.created;
+    console.log(`[LeadGen] FSBO.com: ${fsboLeads.length} found, ${fsboResult.created} new, ${fsboResult.skipped} dupes`);
+  } catch (err) {
+    console.error('[LeadGen] FSBO.com failed:', err);
+    results.push({ source: 'fsbo-com', created: 0, skipped: 0, errors: 1 });
   }
 
   // ── Reddit Intent Monitor ───────────────────────────────────────────────────
