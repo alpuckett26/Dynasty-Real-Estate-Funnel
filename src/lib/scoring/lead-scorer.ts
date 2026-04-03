@@ -118,8 +118,8 @@ export function scoreLead(input: ScoringInput): ScoringResult {
 }
 
 function classifyRoute(score: number): LeadRoute {
-  if (score >= 70) return 'hot';
-  if (score >= 40) return 'warm';
+  if (score >= 60) return 'hot';
+  if (score >= 30) return 'warm';
   return 'cold';
 }
 

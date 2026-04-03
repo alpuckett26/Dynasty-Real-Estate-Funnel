@@ -8,7 +8,7 @@ describe('scoreLead', () => {
     expect(result.totalScore).toBe(0);
   });
 
-  it('scores a warm lead — ready now, pre-approved, area + budget, both contacts', () => {
+  it('scores hot — ready now, pre-approved, area + budget, both contacts', () => {
     const result = scoreLead({
       timeline: '0-3m',
       financingStatus: 'pre-approved',
@@ -17,9 +17,9 @@ describe('scoreLead', () => {
       hasEmail: true,
       hasPhone: true,
     });
-    // 30 (timeline) + 20 (financing) + 15 (area+budget) = 65 → warm
+    // 30 (timeline) + 20 (financing) + 15 (area+budget) = 65 → hot (threshold: 60)
     expect(result.totalScore).toBe(65);
-    expect(result.route).toBe('warm');
+    expect(result.route).toBe('hot');
   });
 
   it('scores hot when showing is requested and contact info provided', () => {
@@ -66,12 +66,12 @@ describe('scoreLead', () => {
     expect(result.breakdown.areaOrBudget).toBeUndefined();
   });
 
-  it('route thresholds: hot >= 70, warm 40-69, cold < 40', () => {
-    // hot: 30+20+15+20 = 85 (with contacts, no penalty)
-    expect(scoreLead({ timeline: '0-3m', financingStatus: 'pre-approved', hasArea: true, hasBudget: true, requestedShowing: true, hasEmail: true, hasPhone: true }).route).toBe('hot');
-    // warm: 30+20+15 = 65 (with contacts, no penalty)
-    expect(scoreLead({ timeline: '0-3m', financingStatus: 'pre-approved', hasArea: true, hasBudget: true, hasEmail: true, hasPhone: true }).route).toBe('warm');
-    // cold: 0+0 = 0 - 20 (no contact) = -20
+  it('route thresholds: hot >= 60, warm 30-59, cold < 30', () => {
+    // hot: 30+20+15 = 65 (timeline+financing+area+budget, both contacts)
+    expect(scoreLead({ timeline: '0-3m', financingStatus: 'pre-approved', hasArea: true, hasBudget: true, hasEmail: true, hasPhone: true }).route).toBe('hot');
+    // warm: 30+20 = 50 (timeline+financing, both contacts)
+    expect(scoreLead({ timeline: '0-3m', financingStatus: 'pre-approved', hasEmail: true, hasPhone: true }).route).toBe('warm');
+    // cold: 0 - 20 (no contact) = -20
     expect(scoreLead({ timeline: '12m+', financingStatus: 'unknown' }).route).toBe('cold');
   });
 });
