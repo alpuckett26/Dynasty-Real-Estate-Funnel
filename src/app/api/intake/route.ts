@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     const { contactId } = await upsertContact(contactProps);
 
-    // ── CRM note ──────────────────────────────────────────────────────────────
+    // ── CRM note (non-blocking) ───────────────────────────────────────────────
     const noteLines = [
       `[INTAKE — ${new Date().toLocaleDateString()}]`,
       `Intent: ${data.intent} | Route: ${scoreResult.route.toUpperCase()} | Score: ${scoreResult.totalScore}`,
@@ -118,17 +118,17 @@ export async function POST(req: NextRequest) {
       `Stage: ${stage}`,
     ].filter(Boolean).join('\n');
 
-    await createNote(contactId, noteLines);
+    createNote(contactId, noteLines).catch((e) => console.error('[IntakeAPI] note failed:', e?.message));
 
-    // ── Follow-up task ────────────────────────────────────────────────────────
+    // ── Follow-up task (non-blocking) ─────────────────────────────────────────
     const taskSubject = buildTaskSubject(scoreResult.route, data);
-    await createTask(contactId, {
+    createTask(contactId, {
       subject: taskSubject,
       body: buildTaskBody(data, scoreResult.totalScore, stage),
       status: 'NOT_STARTED',
       taskType: data.contactPreference === 'email' ? 'EMAIL' : 'CALL',
       dueDate: getTaskDueDateMs(scoreResult.route),
-    });
+    }).catch((e) => console.error('[IntakeAPI] task failed:', e?.message));
 
     // ── Hot lead alert (Slack + SMS to Adreanne) ─────────────────────────────
     if (scoreResult.route === 'hot') {
@@ -166,8 +166,9 @@ export async function POST(req: NextRequest) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid form data', details: err.errors }, { status: 400 });
     }
-    console.error('[IntakeAPI]', err);
-    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[IntakeAPI] 500:', msg);
+    return NextResponse.json({ error: 'Something went wrong. Please try again.', detail: msg }, { status: 500 });
   }
 }
 
