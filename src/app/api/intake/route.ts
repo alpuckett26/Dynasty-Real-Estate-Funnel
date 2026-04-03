@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       urgency_score: scoreResult.urgencyScore,
       total_lead_score: scoreResult.totalScore,
       lead_route: capitalise(scoreResult.route) as HubSpotContactProperties['lead_route'],
-      channel_source: data.source,
+      channel_source: normalizeSource(data.source),
       first_time_homebuyer: data.firstTimeHomebuyer,
       healthcare_worker: data.healthcareWorker,
       program_type: buildProgramType(data),
@@ -284,6 +284,17 @@ function buildTaskBody(data: z.infer<typeof IntakeSchema>, score: number, stage:
     data.healthcareWorker ? '✅ Healthcare worker' : '',
   ].filter(Boolean);
   return lines.join('\n');
+}
+
+function normalizeSource(source: string): HubSpotContactProperties['channel_source'] {
+  if (source.includes('open-house')) return 'open-house';
+  if (source.includes('ads') || source.includes('ad')) return 'ads';
+  if (source.includes('referral')) return 'referral';
+  if (source.includes('call')) return 'call';
+  if (source.includes('ig') || source.includes('instagram')) return 'ig-dm';
+  if (source.includes('messenger') || source.includes('facebook')) return 'messenger';
+  if (source.includes('chat')) return 'website-chat';
+  return 'form';
 }
 
 function capitalise(str: string): string {
