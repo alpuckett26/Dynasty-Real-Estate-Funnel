@@ -15,7 +15,8 @@ import { scrapeCraigslistFSBO } from '@/lib/lead-gen/sources/craigslist';
 import { scrapeFsboCom } from '@/lib/lead-gen/sources/fsbo-com';
 import { scanRedditForLeads } from '@/lib/lead-gen/sources/reddit';
 import { scanBiggerPockets } from '@/lib/lead-gen/sources/biggerpockets';
-import { processCraigslistLeads, processFsboComLeads, processRedditLeads, processBiggerPocketsLeads } from '@/lib/lead-gen/processor';
+import { scanCityData } from '@/lib/lead-gen/sources/city-data';
+import { processCraigslistLeads, processFsboComLeads, processRedditLeads, processBiggerPocketsLeads, processCityDataLeads } from '@/lib/lead-gen/processor';
 import { alertOwner } from '@/lib/sms/twilio';
 
 export const runtime = 'nodejs';
@@ -64,6 +65,18 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[LeadGen] BiggerPockets failed:', err);
     results.push({ source: 'biggerpockets', created: 0, skipped: 0, errors: 1 });
+  }
+
+  // ── City-Data Forum Monitor ─────────────────────────────────────────────────
+  try {
+    const cdLeads = await scanCityData();
+    const cdResult = await processCityDataLeads(cdLeads);
+    results.push(cdResult);
+    totalCreated += cdResult.created;
+    console.log(`[LeadGen] City-Data: ${cdLeads.length} signals, ${cdResult.created} prospects created`);
+  } catch (err) {
+    console.error('[LeadGen] City-Data failed:', err);
+    results.push({ source: 'city-data', created: 0, skipped: 0, errors: 1 });
   }
 
   // ── Reddit Intent Monitor ───────────────────────────────────────────────────

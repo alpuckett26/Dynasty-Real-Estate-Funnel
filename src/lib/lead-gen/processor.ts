@@ -12,6 +12,7 @@ import { alertOwner } from '@/lib/sms/twilio';
 import type { CraigslistLead } from './sources/craigslist';
 import type { FsboComLead } from './sources/fsbo-com';
 import type { BiggerPocketsLead } from './sources/biggerpockets';
+import type { CityDataLead } from './sources/city-data';
 import type { RedditLead } from './sources/reddit';
 
 const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://dynasty-real-estate-funnel.vercel.app/book';
@@ -169,6 +170,52 @@ export async function processBiggerPocketsLeads(leads: BiggerPocketsLead[]): Pro
       result.created++;
     } catch (err) {
       console.error('[LeadGen] BiggerPockets process error:', err);
+      result.errors++;
+    }
+  }
+
+  return result;
+}
+
+// ─── City-Data Forum Leads ────────────────────────────────────────────────────
+
+export async function processCityDataLeads(leads: CityDataLead[]): Promise<ProcessResult> {
+  const result: ProcessResult = { source: 'city-data', created: 0, skipped: 0, errors: 0 };
+
+  const highIntent = leads.filter((l) => l.intentScore >= 4);
+  if (highIntent.length === 0) return result;
+
+  const alertLines = highIntent.slice(0, 5).map((l, i) =>
+    `${i + 1}. ${l.intentType.toUpperCase()} (score ${l.intentScore}) — ${l.author}\n   "${l.title.slice(0, 80)}"\n   ${l.url}`
+  );
+
+  const alertMsg = `🏘️ Dynasty Relocation Intel — ${highIntent.length} City-Data leads today:\n\n${alertLines.join('\n\n')}\n\nReply to their post or send a City-Data message.`;
+  await alertOwner(alertMsg).catch(console.error);
+
+  for (const lead of highIntent.slice(0, 10)) {
+    try {
+      const contactId = await createContact({
+        firstname: `CD: ${lead.author}`,
+        lastname: `(${lead.intentType})`,
+        lead_type: 'Buyer',
+        channel_source: 'city-data' as never,
+        lead_route: 'Warm',
+        last_meaningful_interaction: new Date().toISOString(),
+      });
+
+      await createNote(contactId, [
+        `[CITY-DATA LEAD — ${new Date().toLocaleDateString()}]`,
+        `Intent: ${lead.intentType} | Score: ${lead.intentScore}/10`,
+        `Author: ${lead.author}`,
+        `Post: "${lead.title}"`,
+        lead.body ? `\nContext: ${lead.body}` : '',
+        `\nURL: ${lead.url}`,
+        `\nAction: Reply to their City-Data post or send them a direct message.`,
+      ].filter(Boolean).join('\n'));
+
+      result.created++;
+    } catch (err) {
+      console.error('[LeadGen] City-Data process error:', err);
       result.errors++;
     }
   }
