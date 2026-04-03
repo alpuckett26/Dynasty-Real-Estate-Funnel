@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/reactivate",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/lead-gen",
+      "schedule": "0 7 * * *"
     }
   ]
 }
