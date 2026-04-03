@@ -14,7 +14,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { scrapeCraigslistFSBO } from '@/lib/lead-gen/sources/craigslist';
 import { scrapeFsboCom } from '@/lib/lead-gen/sources/fsbo-com';
 import { scanRedditForLeads } from '@/lib/lead-gen/sources/reddit';
-import { processCraigslistLeads, processFsboComLeads, processRedditLeads } from '@/lib/lead-gen/processor';
+import { scanBiggerPockets } from '@/lib/lead-gen/sources/biggerpockets';
+import { processCraigslistLeads, processFsboComLeads, processRedditLeads, processBiggerPocketsLeads } from '@/lib/lead-gen/processor';
 import { alertOwner } from '@/lib/sms/twilio';
 
 export const runtime = 'nodejs';
@@ -51,6 +52,18 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[LeadGen] FSBO.com failed:', err);
     results.push({ source: 'fsbo-com', created: 0, skipped: 0, errors: 1 });
+  }
+
+  // ── BiggerPockets Investor Monitor ─────────────────────────────────────────
+  try {
+    const bpLeads = await scanBiggerPockets();
+    const bpResult = await processBiggerPocketsLeads(bpLeads);
+    results.push(bpResult);
+    totalCreated += bpResult.created;
+    console.log(`[LeadGen] BiggerPockets: ${bpLeads.length} signals, ${bpResult.created} prospects created`);
+  } catch (err) {
+    console.error('[LeadGen] BiggerPockets failed:', err);
+    results.push({ source: 'biggerpockets', created: 0, skipped: 0, errors: 1 });
   }
 
   // ── Reddit Intent Monitor ───────────────────────────────────────────────────
