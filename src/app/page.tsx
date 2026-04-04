@@ -45,7 +45,7 @@ export default function HomePage() {
         {/* Background image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=90')" }}
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=90')" }}
         />
         {/* Layered gradient for depth */}
         <div className="absolute inset-0 bg-gradient-to-r from-navy-950/95 via-navy-950/75 to-navy-950/20" />
@@ -63,7 +63,7 @@ export default function HomePage() {
 
             <h1 className="font-serif text-5xl font-bold text-white md:text-6xl lg:text-7xl leading-[1.05] tracking-tight">
               Your keys are<br />
-              <span className="text-brand-300">closer than</span><br />
+              <span className="text-blue-300">closer than</span><br />
               you think.
             </h1>
 
@@ -177,7 +177,7 @@ export default function HomePage() {
           <div className="relative">
             <div
               className="aspect-[4/5] rounded-3xl bg-cover bg-center bg-top overflow-hidden shadow-2xl"
-              style={{ backgroundImage: "url('https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=800&q=80')" }}
+              style={{ backgroundImage: "url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80')" }}
             />
             {/* Floating stat card */}
             <div className="absolute -bottom-6 -right-4 md:-right-8 bg-white rounded-2xl shadow-xl px-6 py-5 border border-gray-100">
@@ -309,7 +309,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex gap-0.5">
                     {Array.from({ length: t.stars }).map((_, i) => (
-                      <Star key={i} className="h-3.5 w-3.5 fill-brand-500 text-brand-500" />
+                      <Star key={i} className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
                 </div>

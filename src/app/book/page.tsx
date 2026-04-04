@@ -46,7 +46,7 @@ export default function BookPage() {
       <section className="relative min-h-[85vh] flex items-center overflow-hidden -mt-[72px]">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=90')" }}
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1920&q=90')" }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-navy-950/95 via-navy-950/80 to-navy-950/40" />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950/70 via-transparent to-transparent" />
@@ -119,7 +119,7 @@ export default function BookPage() {
           <div className="relative">
             <div
               className="aspect-[4/3] rounded-3xl bg-cover bg-center shadow-2xl overflow-hidden"
-              style={{ backgroundImage: "url('https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80')" }}
+              style={{ backgroundImage: "url('https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&q=80')" }}
             />
             <div className="absolute -bottom-5 -left-5 bg-white rounded-2xl shadow-xl px-6 py-5 border border-gray-100 max-w-[200px]">
               <p className="text-3xl font-serif font-bold text-navy-950">5 min</p>
@@ -141,7 +141,7 @@ export default function BookPage() {
               <div key={t.name} className="card flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: t.stars }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5 fill-brand-500 text-brand-500" />
+                    <Star key={i} className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
                 <p className="text-gray-700 text-base font-light leading-relaxed flex-1">&ldquo;{t.text}&rdquo;</p>
