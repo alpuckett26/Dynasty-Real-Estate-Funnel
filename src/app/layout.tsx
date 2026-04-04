@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { StickyCTA } from '@/components/layout/StickyCTA';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { PixelScripts } from '@/components/layout/PixelScripts';
+import { CookieBanner } from '@/components/layout/CookieBanner';
 import { RatesWidget } from '@/components/ui/RatesWidget';
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
         <StickyCTA />
         <ChatWidget />
+        <CookieBanner />
       </body>
     </html>
   );
