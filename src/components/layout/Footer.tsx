@@ -1,26 +1,45 @@
 import Link from 'next/link';
 import { Phone, Mail, Instagram, Facebook } from 'lucide-react';
 
-const FAIR_HOUSING_NOTICE =
-  'Dynasty Real Estate is an equal opportunity housing provider. We do not discriminate on the basis of race, color, religion, national origin, sex, disability, or familial status.';
-
 export function Footer() {
   return (
-    <footer className="bg-navy-950 text-gray-300">
+    <footer className="bg-navy-950 text-gray-400">
       <div className="container-wide py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+
           {/* Brand */}
           <div className="md:col-span-2">
-            <p className="font-serif text-2xl font-bold text-white">Dynasty Real Estate</p>
-            <p className="mt-3 text-sm leading-relaxed text-gray-400 max-w-sm">
-              Helping buyers, sellers, and families navigate the real estate market with expert guidance and cutting-edge technology.
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-white text-sm font-bold font-serif">
+                A
+              </div>
+              <div className="leading-none">
+                <p className="font-serif text-lg font-bold text-white tracking-tight">Adreanne</p>
+                <p className="text-xs font-medium text-brand-400 -mt-0.5">The Realtor</p>
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed text-gray-400 max-w-sm">
+              Baton Rouge&apos;s trusted real estate agent. Specializing in first-time buyers,
+              healthcare workers, and families putting down roots in Louisiana.
             </p>
-            <div className="mt-5 flex items-center gap-4">
-              <a href="#" aria-label="Instagram" className="hover:text-white transition-colors">
-                <Instagram className="h-5 w-5" />
+            <div className="mt-5 flex items-center gap-3">
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-gray-400 hover:bg-brand-600 hover:text-white transition-all"
+              >
+                <Instagram className="h-4 w-4" />
               </a>
-              <a href="#" aria-label="Facebook" className="hover:text-white transition-colors">
-                <Facebook className="h-5 w-5" />
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-gray-400 hover:bg-brand-600 hover:text-white transition-all"
+              >
+                <Facebook className="h-4 w-4" />
               </a>
             </div>
           </div>
@@ -28,7 +47,7 @@ export function Footer() {
           {/* Services */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Services</p>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-3 text-sm">
               {[
                 { href: '/buy', label: 'Buy a Home' },
                 { href: '/sell-your-home', label: 'Sell Your Home' },
@@ -43,10 +62,10 @@ export function Footer() {
               ))}
             </ul>
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mt-6 mb-4">Programs</p>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-3 text-sm">
               {[
                 { href: '/register', label: 'First-Time Homebuyer' },
-                { href: '/register', label: 'Healthcare Worker' },
+                { href: '/register', label: 'Healthcare Worker Perks' },
                 { href: '/get-ready', label: 'Credit Repair Path' },
                 { href: '/sell-your-home', label: 'Free Home Valuation' },
               ].map((l) => (
@@ -64,26 +83,38 @@ export function Footer() {
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Contact</p>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="tel:+12252846854" className="flex items-center gap-2 hover:text-white transition-colors">
-                  <Phone className="h-4 w-4 flex-shrink-0" />
+                <a href="tel:+12252846854" className="flex items-center gap-2.5 hover:text-white transition-colors">
+                  <Phone className="h-4 w-4 flex-shrink-0 text-brand-500" />
                   (225) 284-6854
                 </a>
               </li>
               <li>
-                <a href="mailto:adreanne@dynastypartnersllc.com" className="flex items-center gap-2 hover:text-white transition-colors">
-                  <Mail className="h-4 w-4 flex-shrink-0" />
-                  adreanne@dynastypartnersllc.com
+                <a href="mailto:adreanne@adreannetherealtor.com" className="flex items-center gap-2.5 hover:text-white transition-colors">
+                  <Mail className="h-4 w-4 flex-shrink-0 text-brand-500" />
+                  adreanne@adreannetherealtor.com
                 </a>
               </li>
             </ul>
+
+            <div className="mt-6">
+              <Link
+                href="/book"
+                className="inline-flex items-center justify-center rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
+              >
+                Book Free Consult
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Fair Housing Notice */}
+        {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-navy-800">
-          <p className="text-xs text-gray-500 leading-relaxed max-w-3xl">{FAIR_HOUSING_NOTICE}</p>
-          <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-500">
-            <span>© {new Date().getFullYear()} Dynasty Real Estate. All rights reserved.</span>
+          <p className="text-xs text-gray-600 leading-relaxed max-w-3xl">
+            Adreanne Aranha is a licensed real estate agent in Louisiana. Equal Housing Opportunity.
+            We do not discriminate on the basis of race, color, religion, national origin, sex, disability, or familial status.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-5 text-xs text-gray-600">
+            <span>© {new Date().getFullYear()} Adreanne The Realtor. All rights reserved.</span>
             <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms of Service</Link>
             <Link href="/login" className="hover:text-gray-300 transition-colors">Agent Login</Link>

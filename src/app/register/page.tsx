@@ -4,66 +4,67 @@ import { IntakeForm } from '@/components/forms/IntakeForm';
 import { RatesWidget } from '@/components/ui/RatesWidget';
 
 export const metadata: Metadata = {
-  title: 'First-Time Homebuyer & Healthcare Worker Program | Dynasty Real Estate',
+  title: 'First-Time Homebuyer & Healthcare Worker Program | Adreanne The Realtor',
   description:
-    'Register for Dynasty\'s exclusive homebuyer program. First-time buyers and healthcare workers may qualify for down payment assistance, special rates, and dedicated agent support.',
+    'First-time buyers and healthcare workers in Baton Rouge may qualify for up to $15,000 in down payment assistance. Register for a free consultation with Adreanne.',
 };
 
 const BENEFITS = [
   {
     icon: DollarSign,
     title: 'Down Payment Assistance',
-    desc: 'We connect you with programs that can contribute up to $15,000 toward your down payment and closing costs.',
+    desc: 'I connect buyers with programs that can contribute up to $15,000 toward down payment and closing costs. Most people don\'t know they qualify.',
   },
   {
     icon: Shield,
     title: 'Healthcare Worker Perks',
-    desc: 'Nurses, doctors, EMTs, and other healthcare professionals may qualify for additional grants and reduced fees.',
+    desc: 'Nurses, doctors, EMTs, and healthcare professionals may qualify for additional grants and reduced fees. You\'ve earned it.',
   },
   {
     icon: Home,
     title: 'First-Time Buyer Roadmap',
-    desc: 'Step-by-step guidance from pre-approval to keys — no experience needed, we handle everything.',
+    desc: 'Step-by-step guidance from pre-approval to keys — no experience needed. I handle everything and keep you informed the whole way.',
   },
   {
     icon: Users,
-    title: 'Dedicated Agent Support',
-    desc: 'Your own buyer agent at zero cost to you. The seller pays our commission — you get expert representation free.',
+    title: 'Free Buyer Representation',
+    desc: 'Your own dedicated agent at zero cost to you. The seller pays my commission — you get expert representation for free.',
   },
 ];
 
 const STEPS = [
   { step: '01', title: 'Register', desc: 'Fill out the form — takes 2 minutes.' },
-  { step: '02', title: 'Book Your Consultation', desc: 'We match you with a specialist and build your personalized buying plan.' },
-  { step: '03', title: 'Get Pre-Approved', desc: 'We connect you with trusted lenders and DPA programs you qualify for.' },
-  { step: '04', title: 'Find Your Home', desc: 'Tour homes on your schedule. We handle every detail through closing.' },
+  { step: '02', title: 'Free Consultation', desc: 'I\'ll call you, learn your situation, and show you exactly which programs you qualify for.' },
+  { step: '03', title: 'Get Pre-Approved', desc: 'I connect you with trusted lenders and DPA programs in your area — no guesswork.' },
+  { step: '04', title: 'Keys in Hand', desc: 'Tour homes, make the right offer, and close. I\'m with you every step of the way.' },
 ];
 
 export default function RegisterPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-900 to-navy-950 py-20">
-        <div className="container-wide grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white mb-4">
+      <section className="bg-gradient-to-br from-navy-950 to-navy-900 py-20">
+        <div className="container-wide grid md:grid-cols-2 gap-12 items-start">
+          <div className="pt-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-brand-600/20 border border-brand-600/30 px-4 py-1.5 text-xs font-semibold text-brand-300 mb-5">
               <Shield className="h-3.5 w-3.5" />
-              First-Time Homebuyer &amp; Healthcare Worker Program
+              First-Time Buyer &amp; Healthcare Worker Program
             </div>
             <h1 className="font-serif text-4xl font-bold text-white md:text-5xl leading-tight">
               Homeownership is closer than you think
             </h1>
-            <p className="mt-4 text-lg text-navy-300 leading-relaxed">
-              Whether you&apos;re a first-time buyer, a healthcare hero, or just unsure where to start — our specialists are here to guide you from day one. You may qualify for programs that cover your down payment.
+            <p className="mt-4 text-gray-300 leading-relaxed">
+              Whether you&apos;re a first-time buyer or a healthcare professional — I specialize in getting people
+              into homes using programs most agents don&apos;t even know exist. Let&apos;s see what you qualify for.
             </p>
-            <ul className="mt-6 space-y-2">
+            <ul className="mt-6 space-y-2.5">
               {[
                 'Down payment assistance up to $15,000',
                 'Healthcare worker grants available',
-                'No-cost buyer representation',
-                'Credit issues? We have solutions',
+                'Free buyer representation — no cost to you',
+                'Credit not perfect? I have solutions',
               ].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-navy-200">
+                <li key={item} className="flex items-center gap-2.5 text-sm text-gray-300">
                   <CheckCircle className="h-4 w-4 text-brand-400 flex-shrink-0" />
                   {item}
                 </li>
@@ -71,35 +72,35 @@ export default function RegisterPage() {
             </ul>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-4">
             <RatesWidget variant="card" showCTA={false} />
             <IntakeForm
-            source="register-fthb"
-            defaultIntent="buyer"
-            heading="Register for Free"
-            subheading="Takes 2 minutes. We respond within 5 minutes during business hours."
-            ctaLabel="Register & Book My Consultation"
-            className="shadow-2xl"
+              source="register-fthb"
+              defaultIntent="buyer"
+              heading="Register for Free"
+              subheading="Takes 2 minutes. I'll respond within 5 minutes during business hours."
+              ctaLabel="Register & Book My Consultation"
+              className="shadow-2xl"
             />
           </div>
         </div>
       </section>
 
       {/* Benefits */}
-      <section className="py-20">
+      <section className="py-20 bg-white">
         <div className="container-wide">
           <div className="text-center mb-12">
-            <h2 className="section-title">Why register with Dynasty</h2>
+            <h2 className="section-title">What you get when you register</h2>
             <p className="section-subtitle">Programs and support you won&apos;t find everywhere.</p>
           </div>
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-4 gap-5">
             {BENEFITS.map((b) => (
-              <div key={b.title} className="card text-center hover:shadow-md transition-all">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100 text-brand-700 mb-4">
-                  <b.icon className="h-6 w-6" />
+              <div key={b.title} className="card text-center hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 mb-4">
+                  <b.icon className="h-5 w-5" />
                 </div>
-                <h3 className="font-semibold text-navy-900 mb-2">{b.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{b.desc}</p>
+                <h3 className="font-semibold text-navy-950 mb-2 text-sm">{b.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{b.desc}</p>
               </div>
             ))}
           </div>
@@ -107,21 +108,21 @@ export default function RegisterPage() {
       </section>
 
       {/* How it works */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-navy-50">
         <div className="container-wide">
           <div className="text-center mb-12">
             <h2 className="section-title">How it works</h2>
             <p className="section-subtitle">Four steps to your first home.</p>
           </div>
-          <div className="max-w-3xl mx-auto space-y-5">
+          <div className="max-w-2xl mx-auto space-y-4">
             {STEPS.map((s) => (
               <div key={s.step} className="flex items-start gap-5 card">
-                <div className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-brand-600 text-white font-serif font-bold">
+                <div className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-full bg-brand-600 text-white font-serif font-bold text-sm">
                   {s.step}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-navy-900">{s.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1 leading-relaxed">{s.desc}</p>
+                  <h3 className="font-semibold text-navy-950">{s.title}</h3>
+                  <p className="text-sm text-gray-500 mt-1 leading-relaxed">{s.desc}</p>
                 </div>
               </div>
             ))}
@@ -129,11 +130,13 @@ export default function RegisterPage() {
         </div>
       </section>
 
-      {/* Social proof / disclaimer */}
-      <section className="py-12 bg-navy-950">
+      {/* Disclaimer */}
+      <section className="py-10 bg-navy-950">
         <div className="container-narrow text-center">
-          <p className="text-navy-300 text-sm max-w-xl mx-auto leading-relaxed">
-            Dynasty Real Estate is an equal opportunity housing provider. Down payment assistance programs vary by location and eligibility. Program availability is subject to change. Consult your Dynasty agent for current program details.
+          <p className="text-gray-600 text-xs max-w-xl mx-auto leading-relaxed">
+            Adreanne The Realtor is an equal opportunity housing provider. Down payment assistance programs vary
+            by location and eligibility. Program availability is subject to change. Contact Adreanne for current
+            program details applicable to your situation.
           </p>
         </div>
       </section>

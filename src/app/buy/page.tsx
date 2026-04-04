@@ -4,97 +4,98 @@ import { LeadForm } from '@/components/forms/LeadForm';
 import { RatesWidget } from '@/components/ui/RatesWidget';
 
 export const metadata: Metadata = {
-  title: 'Buy a Home | Expert Buyer Representation',
+  title: 'Buy a Home in Baton Rouge | Expert Buyer Representation',
   description:
-    'Find your perfect home with Dynasty Real Estate. Expert buyer agents, exclusive listings, and a proven process that gets you into your dream home.',
+    'Find your perfect home in Baton Rouge with Adreanne The Realtor. First-time buyer programs, expert negotiation, and zero cost to buyers.',
 };
 
 const BUYER_BENEFITS = [
   {
     icon: Search,
-    title: 'Exclusive Listing Access',
-    desc: 'See homes before they hit the market. Our network gives you first access to off-market and coming-soon listings.',
+    title: 'Off-Market Access',
+    desc: 'See homes before they hit Zillow. My network gives you first access to coming-soon and off-market listings.',
   },
   {
     icon: Shield,
     title: 'Expert Negotiation',
-    desc: 'We\'ve negotiated hundreds of offers. Our agents know how to win in competitive markets without overpaying.',
+    desc: 'I know the Baton Rouge market inside out. I structure offers that win without overpaying.',
   },
   {
     icon: HeartHandshake,
-    title: 'Buyer Representation at No Cost',
-    desc: 'Our buyer representation is completely free to you. The seller pays our commission.',
+    title: 'Free to Buyers',
+    desc: 'My buyer representation costs you nothing. The seller pays my commission — you get a full-service agent at no cost.',
   },
   {
     icon: Key,
     title: 'Smooth Closing',
-    desc: 'From offer to keys, we coordinate every step — inspections, appraisals, lenders, and title companies.',
+    desc: 'From offer to keys, I coordinate every step — inspections, appraisals, lenders, and title. You just show up.',
   },
 ];
 
 const BUYER_STEPS = [
-  { step: '01', title: 'Free Consultation', desc: 'We learn your goals, budget, and timeline to create a custom search strategy.' },
-  { step: '02', title: 'Smart Property Search', desc: 'Curated home matches delivered to your inbox. No more endless scrolling.' },
-  { step: '03', title: 'Showings & Selection', desc: 'Tour homes on your schedule. We share honest pros and cons for every property.' },
-  { step: '04', title: 'Winning Offer', desc: 'We structure a compelling offer strategy based on market conditions.' },
-  { step: '05', title: 'Move In', desc: 'Keys in hand. We stay available even after closing for any questions.' },
+  { step: '01', title: 'Free Consultation', desc: 'We talk through your goals, budget, and timeline. I\'ll tell you honestly what\'s possible and which programs you qualify for.' },
+  { step: '02', title: 'Smart Property Search', desc: 'Curated matches based on what you actually want — not just what the algorithm thinks. No endless scrolling.' },
+  { step: '03', title: 'Showings & Honest Feedback', desc: 'Tour homes on your schedule. I give you the real pros and cons for every property, not just the positives.' },
+  { step: '04', title: 'Winning Offer Strategy', desc: 'I structure offers based on real market conditions — competitive enough to win, smart enough to protect you.' },
+  { step: '05', title: 'Keys in Hand', desc: 'Smooth closing, coordinated from start to finish. I stay available even after you move in.' },
 ];
 
 export default function BuyPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-900 to-navy-950 py-20">
-        <div className="container-wide grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="text-brand-400 text-sm font-semibold uppercase tracking-wider mb-3">Buy with Dynasty</p>
+      <section className="bg-gradient-to-br from-navy-950 to-navy-900 py-20">
+        <div className="container-wide grid md:grid-cols-2 gap-12 items-start">
+          <div className="pt-4">
+            <p className="text-brand-400 text-xs font-semibold uppercase tracking-wider mb-4">Buy with Adreanne</p>
             <h1 className="font-serif text-4xl font-bold text-white md:text-5xl leading-tight">
-              Find your perfect home — faster
+              Find your home in Baton Rouge — faster
             </h1>
-            <p className="mt-4 text-lg text-navy-300 leading-relaxed">
-              Expert buyer agents, exclusive listings, and a proven process. We handle the hard parts so you can focus on the exciting ones.
+            <p className="mt-4 text-gray-300 leading-relaxed">
+              Expert buyer representation, local market knowledge, and programs most buyers don&apos;t know exist.
+              I handle the hard parts so you can focus on the exciting ones.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {['No cost to buyers', 'Off-market access', 'Expert negotiation'].map((item) => (
-                <span key={item} className="inline-flex items-center gap-1.5 rounded-full bg-navy-800 px-3 py-1.5 text-xs font-medium text-navy-200">
+            <div className="mt-6 flex flex-wrap gap-2">
+              {['Free to buyers', 'Off-market access', 'First-time buyer programs', 'Expert negotiation'].map((item) => (
+                <span key={item} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-gray-200">
                   <CheckCircle className="h-3 w-3 text-brand-400" /> {item}
                 </span>
               ))}
             </div>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-4">
             <RatesWidget variant="card" showCTA={false} />
             <LeadForm
-            source="buy-page"
-            intent="buyer"
-            heading="Start Your Home Search"
-            subheading="Tell us what you're looking for and we'll connect you with an expert buyer agent."
-            showTimeline
-            showFinancing
-            showMessage
-            ctaLabel="Connect Me with a Buyer Agent"
-            className="shadow-2xl"
+              source="buy-page"
+              intent="buyer"
+              heading="Start Your Home Search"
+              subheading="Tell me what you're looking for — I'll respond within 5 minutes."
+              showTimeline
+              showFinancing
+              showMessage
+              ctaLabel="Connect Me with Adreanne"
+              className="shadow-2xl"
             />
           </div>
         </div>
       </section>
 
       {/* Benefits */}
-      <section className="py-20">
+      <section className="py-20 bg-white">
         <div className="container-wide">
           <div className="text-center mb-12">
-            <h2 className="section-title">Why buyers love Dynasty</h2>
-            <p className="section-subtitle">We put buyers first — always.</p>
+            <h2 className="section-title">Why buyers work with me</h2>
+            <p className="section-subtitle">I put your interests first — always.</p>
           </div>
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-4 gap-5">
             {BUYER_BENEFITS.map((b) => (
-              <div key={b.title} className="card text-center hover:shadow-md transition-all">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700 mb-4">
-                  <b.icon className="h-6 w-6" />
+              <div key={b.title} className="card text-center hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-4">
+                  <b.icon className="h-5 w-5" />
                 </div>
-                <h3 className="font-semibold text-navy-900 mb-2">{b.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{b.desc}</p>
+                <h3 className="font-semibold text-navy-950 mb-2 text-sm">{b.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{b.desc}</p>
               </div>
             ))}
           </div>
@@ -102,21 +103,21 @@ export default function BuyPage() {
       </section>
 
       {/* Process */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-navy-50">
         <div className="container-wide">
           <div className="text-center mb-12">
             <h2 className="section-title">Your buying journey</h2>
-            <p className="section-subtitle">A clear process from search to move-in day.</p>
+            <p className="section-subtitle">A clear process from first call to move-in day.</p>
           </div>
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-2xl mx-auto space-y-4">
             {BUYER_STEPS.map((s) => (
               <div key={s.step} className="flex items-start gap-5 card">
-                <div className="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-brand-600 text-white font-serif font-bold">
+                <div className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-full bg-brand-600 text-white font-serif font-bold text-sm">
                   {s.step}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-navy-900">{s.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1 leading-relaxed">{s.desc}</p>
+                  <h3 className="font-semibold text-navy-950">{s.title}</h3>
+                  <p className="text-sm text-gray-500 mt-1 leading-relaxed">{s.desc}</p>
                 </div>
               </div>
             ))}
@@ -127,9 +128,9 @@ export default function BuyPage() {
       {/* Bottom CTA */}
       <section className="py-16 bg-brand-600">
         <div className="container-narrow text-center">
-          <h2 className="font-serif text-3xl font-bold text-white">Ready to find your dream home?</h2>
-          <p className="mt-3 text-brand-100">Book a free buyer consultation — no commitment required.</p>
-          <a href="/book" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 transition-colors">
+          <h2 className="font-serif text-3xl font-bold text-white">Ready to find your home?</h2>
+          <p className="mt-3 text-brand-100 text-sm">Free buyer consultation — no commitment, no pressure.</p>
+          <a href="/book" className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 transition-colors shadow-sm">
             <Calendar className="h-4 w-4" />
             Book My Free Consultation
           </a>
