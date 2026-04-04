@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Star, Home, TrendingUp, MapPin, CheckCircle, HeartPulse, Wrench, Phone, Quote } from 'lucide-react';
 import { LeadForm } from '@/components/forms/LeadForm';
@@ -43,9 +44,13 @@ export default function HomePage() {
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex items-center overflow-hidden -mt-[72px]">
         {/* Background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=90')" }}
+        <Image
+          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=90"
+          alt="Beautiful home exterior"
+          fill
+          priority
+          className="object-cover object-center"
+          sizes="100vw"
         />
         {/* Layered gradient for depth */}
         <div className="absolute inset-0 bg-gradient-to-r from-navy-950/95 via-navy-950/75 to-navy-950/20" />
