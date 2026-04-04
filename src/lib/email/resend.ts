@@ -29,7 +29,6 @@ export async function sendEmail(params: {
     to: params.to,
     subject: params.subject,
     text: params.text,
-    html: textToHtml(params.text),
     replyTo: params.replyTo ?? process.env.REPLY_TO_EMAIL ?? 'info@adreannetherealtor.com',
   });
   if (error) throw new Error(`Resend error: ${error.message}`);
