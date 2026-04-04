@@ -58,13 +58,13 @@ export async function processCraigslistLeads(leads: CraigslistLead[]): Promise<P
 
       // Send outreach SMS if phone available
       if (lead.phone) {
-        const msg = `Hi! My name is Adreanne with Dynasty Real Estate. I saw your home listed on Craigslist and wanted to reach out. Many FSBO sellers end up getting more money working with an agent — I'd love to show you the numbers. Free, no obligation. Can I give you a quick call? ${CALENDLY_URL}`;
+        const msg = `Hi! My name is Adreanne with ATR. I saw your home listed on Craigslist and wanted to reach out. Many FSBO sellers end up getting more money working with an agent — I'd love to show you the numbers. Free, no obligation. Can I give you a quick call? ${CALENDLY_URL}`;
         await sendSMS(lead.phone, msg).catch(console.error);
       } else if (lead.email) {
         await sendEmail({
           to: lead.email,
-          subject: 'Selling your home? A quick note from Dynasty Real Estate',
-          text: `Hi,\n\nI came across your home listing on Craigslist and wanted to reach out. I'm Adreanne Aranha with Dynasty Real Estate in the area.\n\nMany homeowners who start FSBO end up getting significantly more by working with an agent — once you factor in negotiation, exposure, and the buyer's agent commission structure. I'd love to walk you through the numbers, completely free and with no pressure.\n\nWould you be open to a quick 15-minute call? You can grab a time here: ${CALENDLY_URL}\n\nBest,\nAdreanne Aranha\nDynasty Real Estate\n(225) 284-6854`,
+          subject: 'Selling your home? A quick note from Adreanne The Realtor',
+          text: `Hi,\n\nI came across your home listing on Craigslist and wanted to reach out. I'm Adreanne Aranha, Adreanne The Realtor in the area.\n\nMany homeowners who start FSBO end up getting significantly more by working with an agent — once you factor in negotiation, exposure, and the buyer's agent commission structure. I'd love to walk you through the numbers, completely free and with no pressure.\n\nWould you be open to a quick 15-minute call? You can grab a time here: ${CALENDLY_URL}\n\nBest,\nAdreanne Aranha\nAdreanne The Realtor\n(225) 284-6854`,
         }).catch(console.error);
       }
 
@@ -109,13 +109,13 @@ export async function processFsboComLeads(leads: FsboComLead[]): Promise<Process
       ].filter(Boolean).join('\n'));
 
       if (lead.phone) {
-        const msg = `Hi! I'm Adreanne with Dynasty Real Estate. I saw your home listed on FSBO.com. Many sellers get significantly more by working with an agent — I'd love to show you the numbers. Free, no pressure. Can I give you a quick call? ${CALENDLY_URL}`;
+        const msg = `Hi! I'm Adreanne with ATR. I saw your home listed on FSBO.com. Many sellers get significantly more by working with an agent — I'd love to show you the numbers. Free, no pressure. Can I give you a quick call? ${CALENDLY_URL}`;
         await sendSMS(lead.phone, msg).catch(console.error);
       } else if (lead.email) {
         await sendEmail({
           to: lead.email,
-          subject: 'Your FSBO listing — a quick note from Dynasty Real Estate',
-          text: `Hi,\n\nI came across your listing on FSBO.com and wanted to reach out. I'm Adreanne Aranha with Dynasty Real Estate.\n\nMost FSBO sellers end up netting more by working with an agent once you factor in pricing strategy, negotiation, and buyer agent commission structures. I'd love to walk you through the numbers — completely free, no pressure.\n\nCan we set up a quick 15-minute call? ${CALENDLY_URL}\n\nBest,\nAdreanne Aranha\nDynasty Real Estate\n(225) 284-6854`,
+          subject: 'Your FSBO listing — a quick note from Adreanne The Realtor',
+          text: `Hi,\n\nI came across your listing on FSBO.com and wanted to reach out. I'm Adreanne Aranha, Adreanne The Realtor.\n\nMost FSBO sellers end up netting more by working with an agent once you factor in pricing strategy, negotiation, and buyer agent commission structures. I'd love to walk you through the numbers — completely free, no pressure.\n\nCan we set up a quick 15-minute call? ${CALENDLY_URL}\n\nBest,\nAdreanne Aranha\nAdreanne The Realtor\n(225) 284-6854`,
         }).catch(console.error);
       }
 
@@ -142,7 +142,7 @@ export async function processBiggerPocketsLeads(leads: BiggerPocketsLead[]): Pro
     `${i + 1}. ${l.intentType.toUpperCase()} (score ${l.intentScore}) — ${l.author}\n   "${l.title.slice(0, 80)}"\n   ${l.url}`
   );
 
-  const alertMsg = `🏦 Dynasty Investor Intel — ${highIntent.length} BiggerPockets leads today:\n\n${alertLines.join('\n\n')}\n\nMessage them via BP or comment on their post.`;
+  const alertMsg = `🏦 ATR Investor Intel — ${highIntent.length} BiggerPockets leads today:\n\n${alertLines.join('\n\n')}\n\nMessage them via BP or comment on their post.`;
   await alertOwner(alertMsg).catch(console.error);
 
   // Create prospect records in HubSpot
@@ -189,7 +189,7 @@ export async function processCityDataLeads(leads: CityDataLead[]): Promise<Proce
     `${i + 1}. ${l.intentType.toUpperCase()} (score ${l.intentScore}) — ${l.author}\n   "${l.title.slice(0, 80)}"\n   ${l.url}`
   );
 
-  const alertMsg = `🏘️ Dynasty Relocation Intel — ${highIntent.length} City-Data leads today:\n\n${alertLines.join('\n\n')}\n\nReply to their post or send a City-Data message.`;
+  const alertMsg = `🏘️ ATR Relocation Intel — ${highIntent.length} City-Data leads today:\n\n${alertLines.join('\n\n')}\n\nReply to their post or send a City-Data message.`;
   await alertOwner(alertMsg).catch(console.error);
 
   for (const lead of highIntent.slice(0, 10)) {
@@ -239,7 +239,7 @@ export async function processRedditLeads(leads: RedditLead[]): Promise<ProcessRe
     `${i + 1}. r/${l.subreddit} — ${l.intentType} (score ${l.intentScore})\n   "${l.title.slice(0, 80)}"\n   ${l.url}`
   );
 
-  const alertMsg = `📡 Dynasty Lead Intel — ${highIntent.length} high-intent Reddit posts today:\n\n${alertLines.join('\n\n')}\n\nReach out via Reddit DM or reply to the post.`;
+  const alertMsg = `📡 ATR Lead Intel — ${highIntent.length} high-intent Reddit posts today:\n\n${alertLines.join('\n\n')}\n\nReach out via Reddit DM or reply to the post.`;
   await alertOwner(alertMsg).catch(console.error);
 
   // Also create prospect records in HubSpot for tracking

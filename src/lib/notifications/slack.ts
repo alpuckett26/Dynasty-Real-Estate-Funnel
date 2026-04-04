@@ -18,7 +18,7 @@ interface HotLeadPayload {
 
 export async function notifyHotLead(payload: HotLeadPayload): Promise<void> {
   // 1. SMS Adreanne directly
-  const smsBody = `🔥 HOT LEAD — Dynasty\n${payload.name}\n${payload.phone ?? payload.email ?? 'No contact'}\nIntent: ${capitalise(payload.intent)} | Score: ${payload.score}\nCall NOW → HubSpot: https://app.hubspot.com/contacts/${process.env.HUBSPOT_PORTAL_ID}/contact/${payload.contactId}`;
+  const smsBody = `🔥 HOT LEAD — Adreanne\n${payload.name}\n${payload.phone ?? payload.email ?? 'No contact'}\nIntent: ${capitalise(payload.intent)} | Score: ${payload.score}\nCall NOW → HubSpot: https://app.hubspot.com/contacts/${process.env.HUBSPOT_PORTAL_ID}/contact/${payload.contactId}`;
   await alertOwner(smsBody);
 
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
@@ -32,7 +32,7 @@ export async function notifyHotLead(payload: HotLeadPayload): Promise<void> {
   const blocks = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: '🔥 Hot Lead Alert — Dynasty Real Estate', emoji: true },
+      text: { type: 'plain_text', text: '🔥 Hot Lead Alert — Adreanne The Realtor', emoji: true },
     },
     {
       type: 'section',

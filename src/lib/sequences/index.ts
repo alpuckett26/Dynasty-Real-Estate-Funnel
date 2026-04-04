@@ -1,5 +1,5 @@
 /**
- * Dynasty Real Estate — Email & SMS Nurture Sequences
+ * Adreanne The Realtor — Email & SMS Nurture Sequences
  *
  * 5 branches based on intent + financial readiness.
  * Each message is fully written — no placeholders except {firstName}.
@@ -33,7 +33,7 @@ export const BUYER_HOT: Sequence = {
     {
       delayHours: 0,
       channel: 'email',
-      subject: 'Your Dynasty consultation is confirmed ✓',
+      subject: 'Your consultation is confirmed ✓',
       body: `Hi {firstName},
 
 You're registered and we're ready to move. Here's what happens next:
@@ -44,12 +44,12 @@ You're registered and we're ready to move. Here's what happens next:
 
 Most of our buyers in your position are touring homes within 7–10 days of their first call. Let's get you there.
 
-— The Dynasty Team`,
+— Adreanne`,
     },
     {
       delayHours: 2,
       channel: 'sms',
-      body: `Hi {firstName}, it's Dynasty Real Estate. Ready to find your home? Book your free consult here: {calendlyUrl} — takes 20 min.`,
+      body: `Hi {firstName}, it's Adreanne The Realtor. Ready to find your home? Book your free consult here: {calendlyUrl} — takes 20 min.`,
     },
     {
       delayHours: 24,
@@ -69,7 +69,7 @@ No pressure, no sales pitch. Just a straight conversation about your situation.
 Book your spot here: {calendlyUrl}
 
 Talk soon,
-The Dynasty Team`,
+Adreanne`,
     },
     {
       delayHours: 48,
@@ -93,7 +93,7 @@ Whether you're pre-approved or still working on it, here's what matters most in 
 
 Ready to talk? {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
     },
   ],
 };
@@ -112,7 +112,7 @@ export const BUYER_CREDIT: Sequence = {
       subject: 'You may be closer to homeownership than you think',
       body: `Hi {firstName},
 
-Thanks for registering with Dynasty. A lot of people in your position assume homeownership is years away. That's often not true.
+Thanks for registering with Adreanne The Realtor. A lot of people in your position assume homeownership is years away. That's often not true.
 
 Here's what we know: FHA loans go as low as a 580 credit score. Some down payment assistance programs work with 620. And with the right credit repair plan, many buyers improve their score by 50–100 points in 6–12 months.
 
@@ -122,12 +122,12 @@ Interested? Reply to this email or book a quick call: {calendlyUrl}
 
 We'll be with you the whole way.
 
-— The Dynasty Team`,
+— Adreanne`,
     },
     {
       delayHours: 48,
       channel: 'sms',
-      body: `Hi {firstName}, it's Dynasty. Our credit counseling partner helps buyers like you get ready fast — free of charge. Want an intro? Just reply YES.`,
+      body: `Hi {firstName}, it's Adreanne. Our credit counseling partner helps buyers like you get ready fast — free of charge. Want an intro? Just reply YES.`,
     },
     {
       delayHours: 168, // 1 week
@@ -147,7 +147,7 @@ Knowledge is the first step. When you're ready to take the next one, we're here.
 
 Your free consultation: {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
     },
     {
       delayHours: 336, // 2 weeks
@@ -165,14 +165,14 @@ Three actions that move the needle fastest:
 
 Most people see results within 30–60 days of doing all three.
 
-When you hit your target score, your Dynasty agent will be ready to move fast. In the meantime, reply anytime with questions.
+When you hit your target score, your agent Adreanne will be ready to move fast. In the meantime, reply anytime with questions.
 
-— The Dynasty Team`,
+— Adreanne`,
     },
     {
       delayHours: 720, // 30 days
       channel: 'email',
-      subject: 'Monthly check-in from Dynasty',
+      subject: 'Monthly check-in from Adreanne',
       body: `Hi {firstName},
 
 Just checking in. How are things going on your homebuying journey?
@@ -184,7 +184,7 @@ Our buyer consultation is always free and there's no pressure: {calendlyUrl}
 Also — rates and programs change monthly. Reply and we'll send you the latest on down payment assistance programs available in your area right now.
 
 Rooting for you,
-The Dynasty Team`,
+Adreanne`,
       tag: 'Status: Monthly Check-In Sent',
     },
   ],
@@ -204,7 +204,7 @@ export const BUYER_WARM: Sequence = {
       subject: 'Your homebuying roadmap (start here)',
       body: `Hi {firstName},
 
-Thanks for registering with Dynasty. Since you're planning ahead, here's the roadmap we walk every buyer through:
+Thanks for registering with Adreanne The Realtor. Since you're planning ahead, here's the roadmap we walk every buyer through:
 
 **Now (months 1–2)**
 - Get pre-approved (even if you're not buying yet — it's free and tells you your exact budget)
@@ -223,12 +223,12 @@ Thanks for registering with Dynasty. Since you're planning ahead, here's the roa
 
 Want a personalized version of this plan? Book a free strategy call: {calendlyUrl}
 
-— The Dynasty Team`,
+— Adreanne`,
     },
     {
       delayHours: 72,
       channel: 'sms',
-      body: `Hi {firstName}, Dynasty here. We put together a quick homebuying roadmap for you — check your email. Questions? Reply anytime.`,
+      body: `Hi {firstName}, Adreanne here. We put together a quick homebuying roadmap for you — check your email. Questions? Reply anytime.`,
     },
     {
       delayHours: 168,
@@ -249,7 +249,7 @@ Eligibility depends on your income, location, and loan type. We work with lender
 
 Want us to check what you qualify for? Book a call: {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
     },
     {
       delayHours: 336,
@@ -273,7 +273,7 @@ Don't wait for rates to drop before you start looking. Your purchasing power is 
 
 Want us to connect you with a lender who can show you your exact numbers? {calendlyUrl}
 
-— The Dynasty Team`,
+— Adreanne`,
     },
     {
       delayHours: 504, // 3 weeks
@@ -293,7 +293,7 @@ Having a clear picture of your full number makes the process less stressful when
 
 Ready to build your personalized budget? Let's talk: {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
       tag: 'Status: Warm Sequence Complete',
     },
   ],
@@ -325,12 +325,12 @@ While you wait, book a quick call to go over the numbers together: {calendlyUrl}
 One thing sellers always ask: "Should I make updates before listing?" The answer depends entirely on your timeline and budget. We'll walk you through exactly what's worth doing and what isn't on your call.
 
 Talk soon,
-The Dynasty Team`,
+Adreanne`,
     },
     {
       delayHours: 4,
       channel: 'sms',
-      body: `Hi {firstName}, it's Dynasty Real Estate. Your home valuation is being prepared. Book a quick call to review it together: {calendlyUrl}`,
+      body: `Hi {firstName}, it's Adreanne The Realtor. Your home valuation is being prepared. Book a quick call to review it together: {calendlyUrl}`,
     },
     {
       delayHours: 24,
@@ -351,7 +351,7 @@ Spring and early fall are traditionally strongest, but the right home listed wel
 
 Want to talk through your situation? Book here: {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
     },
     {
       delayHours: 72,
@@ -381,7 +381,7 @@ We'll do a full walkthrough on your listing consult and give you a prioritized l
 
 Book your consult: {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
     },
   ],
 };
@@ -402,7 +402,7 @@ export const BUYER_SELLER: Sequence = {
 
 You've got one of the more complex situations in real estate — and one of the most exciting. Selling your current home while buying your next one requires coordination, but it's something we do regularly.
 
-The good news: Dynasty handles both sides. That means one agent, one communication chain, and a strategy that keeps both transactions moving together.
+The good news: Adreanne handles both sides. That means one agent, one communication chain, and a strategy that keeps both transactions moving together.
 
 Here's what we'll cover on your free consultation:
 - Should you sell first or buy first? (depends on your market and finances)
@@ -414,12 +414,12 @@ Book your free consult: {calendlyUrl}
 
 This is where having the right agent makes all the difference.
 
-— The Dynasty Team`,
+— Adreanne`,
     },
     {
       delayHours: 4,
       channel: 'sms',
-      body: `Hi {firstName}, Dynasty here. Buying and selling together is our specialty. Book a quick strategy call: {calendlyUrl}`,
+      body: `Hi {firstName}, Adreanne here. Buying and selling together is our specialty. Book a quick strategy call: {calendlyUrl}`,
     },
     {
       delayHours: 48,
@@ -447,7 +447,7 @@ Making your purchase contingent on your sale. Accepted in some markets, a dealbr
 
 We'll tell you exactly which strategy makes sense for your specific situation on your call: {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
     },
     {
       delayHours: 168,
@@ -467,7 +467,7 @@ This timeline is tight but achievable with the right agent coordinating both sid
 
 Ready to map yours out? {calendlyUrl}
 
-— Dynasty Real Estate`,
+— Adreanne The Realtor`,
       tag: 'Status: Both Sequence Complete',
     },
   ],
