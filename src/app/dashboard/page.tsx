@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Phone, Mail, Calendar, TrendingUp, Users, Flame, Clock, RefreshCw, CheckCircle, MessageSquare, Zap, FileText, Bell, ChevronRight } from 'lucide-react';
+import { Phone, Mail, Calendar, TrendingUp, Users, Flame, Clock, RefreshCw, CheckCircle, MessageSquare, Zap, FileText, Bell, ChevronRight, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { handleSignOut } from '@/app/actions/auth';
 
 interface Lead {
   id: string;
@@ -43,11 +44,10 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [key, setKey] = useState('');
-  const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<Tab>('leads');
   const [filter, setFilter] = useState<'all' | 'hot' | 'warm' | 'cold'>('all');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteInput, setNoteInput] = useState('');
   const [noteLoading, setNoteLoading] = useState(false);
@@ -61,28 +61,23 @@ export default function DashboardPage() {
   const [contentResult, setContentResult] = useState('');
   const [contentLoading, setContentLoading] = useState(false);
 
-  const fetchLeads = useCallback(async (dashKey: string) => {
+  const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/dashboard/leads', { headers: { 'x-dashboard-key': dashKey } });
-      if (res.status === 401) { setError('Wrong password'); setLoading(false); return; }
+      const res = await fetch('/api/dashboard/leads');
+      if (res.status === 401) { setError('Unauthorized'); setLoading(false); return; }
       if (!res.ok) { setError('Failed to load leads'); setLoading(false); return; }
       const data = await res.json();
       setLeads(data.leads);
       setStats(data.stats);
-      setAuthed(true);
-      // Count leads from last 24h
       const oneDayAgo = Date.now() - 86400000;
       setNewLeadCount(data.leads.filter((l: Lead) => new Date(l.createdAt ?? 0).getTime() > oneDayAgo).length);
     } catch { setError('Connection error'); }
     finally { setLoading(false); }
   }, []);
 
-  function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    fetchLeads(key);
-  }
+  useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
   async function fetchNotes(contactId: string) {
     setNotes([]);
@@ -157,22 +152,12 @@ export default function DashboardPage() {
 
   const portalId = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? '245763239';
 
-  if (!authed) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-          <p className="text-center font-serif text-2xl font-bold text-white mb-2">Dynasty Dashboard</p>
-          <p className="text-center text-navy-400 text-sm mb-8">Agent access only</p>
-          <form onSubmit={handleLogin} className="card space-y-4">
-            <div>
-              <label className="label">Access Key</label>
-              <input type="password" value={key} onChange={(e) => setKey(e.target.value)} className="input-field" placeholder="Enter dashboard key or leave blank" autoFocus />
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? 'Loading...' : 'Access Dashboard'}
-            </button>
-          </form>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Loading leads...</p>
         </div>
       </div>
     );
@@ -183,7 +168,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="bg-navy-900 text-white px-6 py-4 flex items-center justify-between">
         <div>
-          <p className="font-serif text-xl font-bold">Dynasty Dashboard</p>
+          <p className="font-serif text-xl font-bold">ATR Dashboard</p>
           <p className="text-navy-400 text-xs mt-0.5">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -193,8 +178,17 @@ export default function DashboardPage() {
               {newLeadCount} new today
             </div>
           )}
-          <button onClick={() => fetchLeads(key)} className="flex items-center gap-2 text-sm text-navy-300 hover:text-white transition-colors">
+          <button onClick={() => fetchLeads()} className="flex items-center gap-2 text-sm text-navy-300 hover:text-white transition-colors">
             <RefreshCw className="h-4 w-4" />
+          </button>
+          <button
+            onClick={async () => { setSigningOut(true); await handleSignOut(); }}
+            disabled={signingOut}
+            className="flex items-center gap-1.5 text-sm text-navy-300 hover:text-white transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+            {signingOut ? '...' : 'Sign out'}
           </button>
         </div>
       </div>

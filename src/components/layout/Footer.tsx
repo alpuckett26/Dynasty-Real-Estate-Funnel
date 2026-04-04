@@ -86,6 +86,7 @@ export function Footer() {
             <span>© {new Date().getFullYear()} Dynasty Real Estate. All rights reserved.</span>
             <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms of Service</Link>
+            <Link href="/login" className="hover:text-gray-300 transition-colors">Agent Login</Link>
           </div>
         </div>
       </div>

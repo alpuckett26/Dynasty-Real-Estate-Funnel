@@ -1,18 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { Client } from '@hubspot/api-client';
+import { auth } from '@/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest) {
-  const token = process.env.HUBSPOT_ACCESS_TOKEN;
-  if (!token) return NextResponse.json({ error: 'Not configured' }, { status: 500 });
-
-  // Simple password protection
-  const auth = req.headers.get('x-dashboard-key');
-  const key = process.env.DASHBOARD_KEY;
-  if (key && auth !== key) {
+export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const token = process.env.HUBSPOT_ACCESS_TOKEN;
+  if (!token) return NextResponse.json({ error: 'Not configured' }, { status: 500 });
 
   const client = new Client({ accessToken: token });
 
