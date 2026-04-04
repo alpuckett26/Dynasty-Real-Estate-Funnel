@@ -17,8 +17,19 @@ const SYSTEM_PROMPT = CONVERSATION_AGENT_PROMPT;
 export async function runConversationAgent(
   input: ConversationAgentInput
 ): Promise<ConversationAgentOutput> {
+  // Inject what we already know so the model never re-asks for it
+  const captured = input.capturedContact ?? {};
+  const knownFields = Object.entries(captured)
+    .filter(([, v]) => v && String(v).trim() !== '')
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(', ');
+
+  const systemWithContext = knownFields
+    ? `${SYSTEM_PROMPT}\n\nALREADY COLLECTED — do NOT ask for these again: ${knownFields}`
+    : SYSTEM_PROMPT;
+
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemWithContext },
     ...input.history.map((m) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
