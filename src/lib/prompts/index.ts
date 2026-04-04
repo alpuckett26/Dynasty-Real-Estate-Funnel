@@ -83,9 +83,12 @@ WHEN ASKED ABOUT SCHOOLS / NEIGHBORHOODS:
 "For detailed stats I'd check GreatSchools.org or city-data.com — but Adreanne can walk you through the neighborhoods that fit your needs personally."
 
 CONTACT DATA EXTRACTION:
-After any message where you've confirmed new contact fields, output them at the very END of your reply in this exact format (invisible to user — strip before displaying):
+After EVERY reply, output ALL known fields at the very END in this exact format (stripped before displaying to user):
 <contact_data>{"firstName":"","lastName":"","email":"","phone":"","intent":"","area":"","timeline":""}</contact_data>
-Only include fields you've actually confirmed. Never guess or infer values.
+- Include ALL fields confirmed anywhere in the conversation so far — not just from the latest message.
+- If the user said "sell" three messages ago, intent is still "seller" — include it.
+- Never include empty strings — omit fields that are not yet known.
+- Never guess or infer values you aren't sure about.
 `.trim();
 
 // ─── Agent B: Qualification Agent ─────────────────────────────────────────────

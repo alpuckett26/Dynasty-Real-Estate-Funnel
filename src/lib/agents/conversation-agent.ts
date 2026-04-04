@@ -17,8 +17,15 @@ const SYSTEM_PROMPT = CONVERSATION_AGENT_PROMPT;
 export async function runConversationAgent(
   input: ConversationAgentInput
 ): Promise<ConversationAgentOutput> {
-  // Inject what we already know so the model never re-asks for it
-  const captured = input.capturedContact ?? {};
+  // Merge captured contact with intent inferred from conversation history
+  const captured: Record<string, string> = { ...(input.capturedContact ?? {}) };
+
+  // If intent not yet stored, extract it from user messages in history
+  if (!captured.intent) {
+    const inferredIntent = extractIntentFromHistory(input.history, input.userMessage);
+    if (inferredIntent) captured.intent = inferredIntent;
+  }
+
   const knownFields = Object.entries(captured)
     .filter(([, v]) => v && String(v).trim() !== '')
     .map(([k, v]) => `${k}: ${v}`)
@@ -39,8 +46,8 @@ export async function runConversationAgent(
 
   const raw = await chatCompletion(messages, { temperature: 0.5, maxTokens: 512 });
 
-  // Parse contact data if present
-  let capturedContact: Partial<LeadContact> = input.capturedContact ?? {};
+  // Parse contact data if present — merge with inferred fields
+  let capturedContact: Partial<LeadContact> = { ...(input.capturedContact ?? {}), ...filterEmpty(captured) };
   const contactMatch = raw.match(/<contact_data>([\s\S]*?)<\/contact_data>/);
   if (contactMatch) {
     try {
@@ -93,4 +100,22 @@ export async function runConversationAgent(
 
 function filterEmpty(obj: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v && v.trim() !== ''));
+}
+
+function extractIntentFromHistory(
+  history: ConversationMessage[],
+  currentMessage: string
+): string | undefined {
+  const allUserText = [
+    ...history.filter((m) => m.role === 'user').map((m) => m.content),
+    currentMessage,
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  if (/\bsell\b|\bselling\b|\blisting\b/.test(allUserText)) return 'seller';
+  if (/\bbuy\b|\bbuying\b|\bpurchase\b|\blooking for a home\b/.test(allUserText)) return 'buyer';
+  if (/\brelocat\b|\bmoving to\b/.test(allUserText)) return 'relocation';
+  if (/\bboth\b/.test(allUserText)) return 'both';
+  return undefined;
 }
