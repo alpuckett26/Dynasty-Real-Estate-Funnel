@@ -10,6 +10,7 @@ const PROGRAMS = [
   { href: '/register', label: 'First-Time Homebuyer', badge: 'Up to $15k DPA' },
   { href: '/register', label: 'Healthcare Worker Perks', badge: 'Grants Available' },
   { href: '/get-ready', label: 'Credit Repair Path', badge: null },
+  { href: '/credit-path', label: 'Track My Progress', badge: null },
   { href: '/sell-your-home', label: 'Free Home Valuation', badge: null },
 ];
 
