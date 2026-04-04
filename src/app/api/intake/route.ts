@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Enroll in nurture sequence (step 0 fires instantly) ───────────────────
-    enrollLead({
+    await enrollLead({
       contactId,
       firstName: data.firstName,
       email: data.email || undefined,
