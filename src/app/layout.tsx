@@ -39,9 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <PixelScripts />
-        <RatesWidget variant="banner" />
         <Header />
-        <main className="min-h-screen">{children}</main>
+        <main className="min-h-screen pt-[72px]">{children}</main>
         <Footer />
         <StickyCTA />
         <ChatWidget />

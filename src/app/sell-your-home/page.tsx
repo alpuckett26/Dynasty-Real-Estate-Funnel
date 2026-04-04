@@ -30,7 +30,7 @@ export default function SellYourHomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-950 to-navy-900 py-20">
+      <section className="bg-gradient-to-br from-navy-950 to-navy-900 py-20 -mt-[72px] pt-[calc(72px+5rem)]">
         <div className="container-wide grid md:grid-cols-2 gap-12 items-start">
           <div className="pt-4">
             <p className="text-brand-400 text-xs font-semibold uppercase tracking-wider mb-4">

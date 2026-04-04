@@ -14,7 +14,7 @@ import { enrollLead } from '@/lib/sequences/runner';
 import { sendSMS } from '@/lib/sms/twilio';
 import { sendEmail } from '@/lib/email/resend';
 import { createHmac } from 'crypto';
-import { findContactByEmailOrPhone, updateContact } from '@/lib/hubspot/client';
+import { findContactByEmailOrPhone, createContact, updateContact } from '@/lib/hubspot/client';
 import type { InboundCaptureEvent } from '@/types/lead';
 
 function verifyHmacSignature(body: string, signature: string): boolean {
@@ -96,19 +96,93 @@ const WebhookPayload = z.discriminatedUnion('type', [
   CalendlyPayload,
 ]);
 
+// ─── Calendly native format handler ──────────────────────────────────────────
+// Calendly sends its own JSON structure (no `type` field) with a
+// `Calendly-Webhook-Signature` header. We handle it before the generic Zod
+// discriminated-union parse so we don't reject legitimate events.
+
+const CalendlyNativePayload = z.object({
+  event: z.string(), // 'invitee.created' | 'invitee.canceled'
+  payload: z.object({
+    event_type: z.object({ name: z.string().optional() }).optional(),
+    event: z.object({ start_time: z.string().optional() }).optional(),
+    invitee: z.object({
+      name: z.string().optional(),
+      email: z.string().email(),
+    }),
+  }),
+});
+
+async function handleCalendlyEvent(body: unknown): Promise<NextResponse> {
+  const parsed = CalendlyNativePayload.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid Calendly payload', details: parsed.error.errors }, { status: 400 });
+  }
+
+  const { event, payload } = parsed.data;
+  const booked = event === 'invitee.created';
+  const { name, email } = payload.invitee;
+  const startTime = payload.event?.start_time;
+
+  // Upsert contact — create if not yet in HubSpot
+  let contactId = await findContactByEmailOrPhone(email);
+  if (!contactId) {
+    const nameParts = (name ?? '').split(' ');
+    contactId = await createContact({
+      firstName: nameParts[0] || undefined,
+      lastName: nameParts.slice(1).join(' ') || undefined,
+      email,
+      source: 'calendly',
+      channel_source: 'calendly',
+      consent_sms: false,
+      consent_email: true,
+      lead_route: 'warm',
+    } as never);
+  }
+
+  await updateContact(contactId, {
+    consultation_status: booked ? 'Booked' : 'Canceled',
+    last_meaningful_interaction: new Date().toISOString(),
+  } as never);
+
+  // Alert Adreanne via SMS
+  if (booked) {
+    const adreannePhone = process.env.ADREANNE_PHONE;
+    if (adreannePhone) {
+      const when = startTime
+        ? new Date(startTime).toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'short' })
+        : 'time TBD';
+      const displayName = name ?? email;
+      sendSMS(
+        adreannePhone,
+        `📅 New consultation booked — ${displayName} (${email}) at ${when}. Check HubSpot for details.`
+      ).catch(console.error);
+    }
+  }
+
+  return NextResponse.json({ ok: true, action: booked ? 'consultation_booked' : 'consultation_canceled', contactId });
+}
+
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
-  const signature = req.headers.get('x-webhook-signature') ?? '';
 
-  if (!verifyHmacSignature(rawBody, signature)) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-  }
+  // Detect real Calendly webhooks by their header
+  const isCalendly = req.headers.has('Calendly-Webhook-Signature') || req.headers.has('calendly-webhook-signature');
 
   let body: unknown;
   try {
     body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  if (isCalendly) {
+    return handleCalendlyEvent(body);
+  }
+
+  const signature = req.headers.get('x-webhook-signature') ?? '';
+  if (!verifyHmacSignature(rawBody, signature)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
   try {

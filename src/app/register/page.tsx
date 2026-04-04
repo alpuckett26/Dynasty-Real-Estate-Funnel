@@ -43,7 +43,7 @@ export default function RegisterPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-950 to-navy-900 py-20">
+      <section className="bg-gradient-to-br from-navy-950 to-navy-900 py-20 -mt-[72px] pt-[calc(72px+5rem)]">
         <div className="container-wide grid md:grid-cols-2 gap-12 items-start">
           <div className="pt-4">
             <div className="inline-flex items-center gap-2 rounded-full bg-brand-600/20 border border-brand-600/30 px-4 py-1.5 text-xs font-semibold text-brand-300 mb-5">

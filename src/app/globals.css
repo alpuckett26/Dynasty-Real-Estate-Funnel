@@ -23,22 +23,28 @@
 }
 
 @layer components {
+  /* ── Buttons ─────────────────────────────────────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-700 hover:shadow-md active:scale-95 disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-7 py-3.5 text-sm font-semibold tracking-wide text-white shadow-sm transition-all hover:bg-brand-700 hover:shadow-lg hover:-translate-y-px active:scale-95 disabled:opacity-60;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-600 px-6 py-3 text-sm font-semibold text-brand-700 transition-all hover:bg-brand-50 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-600 px-7 py-3.5 text-sm font-semibold tracking-wide text-brand-700 transition-all hover:bg-brand-50 active:scale-95;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-100 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-100 active:scale-95;
   }
 
   .btn-white {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-navy-950 shadow-sm transition-all hover:bg-gray-50 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-white/10 border border-white/30 backdrop-blur-sm px-7 py-3.5 text-sm font-semibold tracking-wide text-white transition-all hover:bg-white/20 active:scale-95;
   }
 
+  .btn-outline-dark {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-navy-300 px-7 py-3.5 text-sm font-semibold text-navy-950 transition-all hover:border-navy-950 hover:bg-navy-50 active:scale-95;
+  }
+
+  /* ── Forms ───────────────────────────────────────────────────────────────── */
   .input-field {
     @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm transition-all focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100 placeholder:text-gray-400;
   }
@@ -47,36 +53,52 @@
     @apply block text-sm font-medium text-gray-700 mb-1.5;
   }
 
+  .form-error {
+    @apply mt-1 text-xs text-red-500;
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────────── */
   .card {
-    @apply rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5;
+    @apply rounded-2xl bg-white p-7 border border-gray-100 shadow-sm transition-all duration-200;
   }
 
   .card-warm {
-    @apply rounded-2xl bg-navy-50 p-6 ring-1 ring-navy-100;
+    @apply rounded-2xl bg-navy-50 p-7 border border-navy-100;
+  }
+
+  .card-dark {
+    @apply rounded-2xl bg-navy-900 p-7 border border-navy-800;
+  }
+
+  /* ── Typography ──────────────────────────────────────────────────────────── */
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-[0.15em] text-brand-500;
   }
 
   .section-title {
-    @apply text-3xl font-serif font-bold text-navy-950 md:text-4xl leading-tight;
+    @apply mt-3 text-4xl font-serif font-bold text-navy-950 md:text-5xl leading-[1.1] tracking-tight;
   }
 
   .section-subtitle {
-    @apply mt-3 text-lg text-gray-500 leading-relaxed;
+    @apply mt-4 text-lg text-gray-500 leading-relaxed font-normal;
   }
 
+  /* ── Badges ──────────────────────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wide;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────────────────────── */
   .container-narrow {
     @apply mx-auto max-w-3xl px-4 sm:px-6;
   }
 
   .container-wide {
-    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto max-w-7xl px-5 sm:px-8 lg:px-12;
   }
 
-  .form-error {
-    @apply mt-1 text-xs text-red-500;
-  }
-
-  /* Pill badge */
-  .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  /* ── Divider ─────────────────────────────────────────────────────────────── */
+  .divider {
+    @apply border-t border-gray-100 my-0;
   }
 }

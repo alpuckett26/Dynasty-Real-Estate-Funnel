@@ -32,30 +32,39 @@ export async function RatesWidget({ variant = 'card', showCTA = true }: RatesWid
   });
 
   if (variant === 'banner') {
+    const items = [
+      `30-yr Fixed: ${formatRate(rates.rate30yr)}`,
+      `15-yr Fixed: ${formatRate(rates.rate15yr)}`,
+      `5/1 ARM: ${formatRate(rates.rate5arm)}`,
+      ...(rates.weekChange30yr !== null ? [`30-yr ${describeChange(rates.weekChange30yr)}`] : []),
+      `Rates as of ${asOfFormatted}`,
+      ...(showCTA ? ['Get Pre-Approved →'] : []),
+    ];
+
+    // Duplicate for seamless infinite loop
+    const allItems = [...items, ...items];
+
     return (
-      <div className="bg-navy-900 border-b border-navy-800 py-2">
-        <div className="container-wide flex flex-wrap items-center justify-center gap-6 text-sm">
-          <span className="text-gray-400 text-xs">Rates as of {asOfFormatted}:</span>
-          <span className="font-semibold text-white">
-            30-yr Fixed: <span className="text-brand-400">{formatRate(rates.rate30yr)}</span>
-          </span>
-          <span className="font-semibold text-white">
-            15-yr Fixed: <span className="text-brand-400">{formatRate(rates.rate15yr)}</span>
-          </span>
-          <span className="font-semibold text-white">
-            5/1 ARM: <span className="text-brand-400">{formatRate(rates.rate5arm)}</span>
-          </span>
-          {rates.weekChange30yr !== null && (
-            <span className={`flex items-center gap-1 text-xs ${changeColor}`}>
-              {changeIcon}
-              {describeChange(rates.weekChange30yr)}
+      <div className="bg-navy-950 border-b border-navy-800/60 py-2 overflow-hidden">
+        <div className="flex animate-ticker whitespace-nowrap will-change-transform">
+          {allItems.map((item, i) => (
+            <span key={i} className="inline-flex items-center">
+              <span className={`text-xs font-medium px-6 ${
+                item.includes('→')
+                  ? 'text-brand-400 font-semibold'
+                  : item.startsWith('Rates as of')
+                  ? 'text-gray-500'
+                  : item.includes('down') || item.includes('lower')
+                  ? 'text-green-400'
+                  : item.includes('up') || item.includes('higher')
+                  ? 'text-red-400'
+                  : 'text-gray-200'
+              }`}>
+                {item}
+              </span>
+              <span className="text-navy-700 text-xs">·</span>
             </span>
-          )}
-          {showCTA && (
-            <a href="/book" className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-700 transition-colors">
-              Get Pre-Approved
-            </a>
-          )}
+          ))}
         </div>
       </div>
     );
