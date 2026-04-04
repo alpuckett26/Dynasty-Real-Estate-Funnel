@@ -13,12 +13,20 @@ const PROGRAMS = [
   { href: '/sell-your-home', label: 'Free Home Valuation', badge: null },
 ];
 
+const TOOLS = [
+  { href: '/mortgage-calculator', label: 'Mortgage Calculator', badge: null },
+  { href: '/affordability', label: 'How Much Can I Afford?', badge: null },
+  { href: '/rent-vs-buy', label: 'Rent vs. Buy', badge: null },
+  { href: '/down-payment-assistance', label: 'Down Payment Assistance', badge: 'Free money' },
+];
+
 // Pages where the hero is dark — header starts transparent
 const DARK_HERO_PAGES = ['/', '/buy', '/sell-your-home', '/relocate', '/register', '/get-ready'];
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const [programsOpen, setProgramsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
 
@@ -87,6 +95,37 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+
+          {/* Tools dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setToolsOpen(true)}
+            onMouseLeave={() => setToolsOpen(false)}
+          >
+            <button className={cn(
+              'flex items-center gap-1 text-sm font-medium transition-colors',
+              transparent ? 'text-white/80 hover:text-white' : 'text-gray-600 hover:text-navy-950'
+            )}>
+              Tools
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', toolsOpen && 'rotate-180')} />
+            </button>
+            {toolsOpen && (
+              <div className="absolute left-0 top-full pt-2 w-64">
+                <div className="rounded-2xl bg-white shadow-2xl ring-1 ring-black/8 py-2 overflow-hidden">
+                  {TOOLS.map((p) => (
+                    <Link key={p.label} href={p.href}
+                      className="flex items-center justify-between px-5 py-3 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors"
+                      onClick={() => setToolsOpen(false)}>
+                      <span className="font-medium">{p.label}</span>
+                      {p.badge && (
+                        <span className="ml-2 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">{p.badge}</span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Programs dropdown */}
           <div
@@ -191,6 +230,18 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+
+          <div className="pt-2 mt-2 border-t border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-4 pb-2">Free Tools</p>
+            {TOOLS.map((p) => (
+              <Link key={p.label} href={p.href}
+                className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setOpen(false)}>
+                <span className="font-medium">{p.label}</span>
+                {p.badge && <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">{p.badge}</span>}
+              </Link>
+            ))}
+          </div>
 
           <div className="pt-2 mt-2 border-t border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-4 pb-2">Programs</p>
