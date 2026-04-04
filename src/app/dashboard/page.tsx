@@ -58,7 +58,7 @@ export default function DashboardPage() {
   const [contentType, setContentType] = useState<'social' | 'email' | 'ad'>('social');
   const [contentContext, setContentContext] = useState('');
   const [contentTone, setContentTone] = useState<'professional' | 'friendly' | 'urgent'>('friendly');
-  const [contentResult, setContentResult] = useState('');
+  const [contentResult, setContentResult] = useState<{ content: string; headline?: string; cta?: string; hashtags?: string[]; variants?: string[] } | null>(null);
   const [contentLoading, setContentLoading] = useState(false);
 
   const fetchLeads = useCallback(async () => {
@@ -124,7 +124,7 @@ export default function DashboardPage() {
   async function generateContent() {
     if (!contentContext.trim()) return;
     setContentLoading(true);
-    setContentResult('');
+    setContentResult(null);
     try {
       const res = await fetch('/api/content', {
         method: 'POST',
@@ -132,10 +132,23 @@ export default function DashboardPage() {
         body: JSON.stringify({ type: contentType, context: contentContext, tone: contentTone }),
       });
       const data = await res.json();
-      setContentResult(data.content ?? data.text ?? JSON.stringify(data));
-    } catch { setContentResult('Generation failed. Check your OpenAI key.'); }
+      if (data.content) {
+        setContentResult(data);
+      } else {
+        setContentResult({ content: 'Generation failed — try again or check your OpenAI key.' });
+      }
+    } catch { setContentResult({ content: 'Generation failed. Check your OpenAI key.' }); }
     finally { setContentLoading(false); }
   }
+
+  const TEMPLATES: { label: string; type: 'social' | 'email' | 'ad'; tone: 'professional' | 'friendly' | 'urgent'; context: string }[] = [
+    { label: '🏡 Just Listed', type: 'social', tone: 'friendly', context: 'Just listed a home in Baton Rouge. [Add: bedrooms, bathrooms, price, neighborhood, one standout feature]' },
+    { label: '🎉 Just Sold', type: 'social', tone: 'friendly', context: 'Just helped a client close on their new home in Baton Rouge. [Add: any details — first home, relocation, how long it took]' },
+    { label: '💰 Down Payment Help', type: 'social', tone: 'friendly', context: 'Many first-time buyers in Louisiana qualify for up to $15,000 in down payment assistance and don\'t know it. Adreanne connects buyers with these programs.' },
+    { label: '🏥 Healthcare Heroes', type: 'social', tone: 'friendly', context: 'Nurses, doctors, EMTs, and healthcare workers in Baton Rouge may qualify for special homebuying perks and grants through ATR\'s Healthcare Hero program.' },
+    { label: '📉 Rate Update', type: 'email', tone: 'friendly', context: 'Mortgage rates moved this week. Share what it means for someone\'s monthly payment on a $250k home in Baton Rouge and why now might be a good time to get pre-approved.' },
+    { label: '📣 Open House Ad', type: 'ad', tone: 'urgent', context: 'Open house this weekend in Baton Rouge. [Add: address, price, date/time, key features]' },
+  ];
 
   const handleSelectLead = (lead: Lead) => {
     setSelectedLead(lead);
@@ -243,9 +256,28 @@ export default function DashboardPage() {
         {tab === 'content' && (
           <div className="max-w-2xl space-y-4">
             <div className="card space-y-4">
-              <h2 className="font-serif text-xl font-bold text-navy-900">AI Content Generator</h2>
-              <p className="text-sm text-gray-500">Generate social posts, emails, and ad copy powered by GPT-4o.</p>
+              <div>
+                <h2 className="font-serif text-xl font-bold text-navy-900">AI Content Generator</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Writes in your voice, for your market. Powered by GPT-4o.</p>
+              </div>
 
+              {/* Quick templates */}
+              <div>
+                <p className="label mb-2">Quick Templates</p>
+                <div className="flex flex-wrap gap-2">
+                  {TEMPLATES.map((t) => (
+                    <button
+                      key={t.label}
+                      onClick={() => { setContentType(t.type); setContentTone(t.tone); setContentContext(t.context); }}
+                      className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-brand-400 hover:text-brand-600 transition-colors"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Type selector */}
               <div className="grid grid-cols-3 gap-3">
                 {(['social', 'email', 'ad'] as const).map((t) => (
                   <button key={t} onClick={() => setContentType(t)} className={cn('rounded-xl border py-2 text-sm font-medium transition-colors', contentType === t ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-600 hover:border-gray-300')}>
@@ -254,37 +286,83 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              <div>
-                <label className="label">Tone</label>
-                <select value={contentTone} onChange={(e) => setContentTone(e.target.value as never)} className="input-field">
-                  <option value="friendly">Friendly</option>
-                  <option value="professional">Professional</option>
-                  <option value="urgent">Urgent</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Tone</label>
+                  <select value={contentTone} onChange={(e) => setContentTone(e.target.value as never)} className="input-field">
+                    <option value="friendly">Friendly</option>
+                    <option value="professional">Professional</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="label">What do you want to promote or say?</label>
+                <label className="label">Details — the more specific, the better</label>
                 <textarea
                   value={contentContext}
                   onChange={(e) => setContentContext(e.target.value)}
-                  className="input-field min-h-[100px]"
-                  placeholder="e.g. We have a 3br/2ba home in Baton Rouge at $285k, great school district, first-time buyer friendly..."
+                  className="input-field min-h-[120px]"
+                  placeholder="e.g. Just listed a 3BR/2BA home in Zachary, LA at $289k. Has a huge backyard, new roof 2023, walking distance to Zachary Elementary. Perfect for a first-time buyer family."
                 />
               </div>
 
               <button onClick={generateContent} disabled={contentLoading || !contentContext.trim()} className="btn-primary w-full">
-                {contentLoading ? 'Generating...' : 'Generate Content'}
+                {contentLoading ? 'Writing...' : 'Generate Content'}
               </button>
             </div>
 
             {contentResult && (
-              <div className="card">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="font-semibold text-navy-900">Generated Content</p>
-                  <button onClick={() => navigator.clipboard.writeText(contentResult)} className="text-xs text-brand-600 hover:text-brand-700">Copy</button>
+              <div className="space-y-3">
+                {/* Main content */}
+                <div className="card space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-navy-900">
+                      {contentType === 'social' ? '📱 Post Copy' : contentType === 'email' ? '📧 Email Body' : '📣 Ad Copy'}
+                    </p>
+                    <button onClick={() => navigator.clipboard.writeText(contentResult.content)} className="text-xs text-brand-600 hover:text-brand-700">Copy</button>
+                  </div>
+                  <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{contentResult.content}</p>
+
+                  {contentResult.headline && (
+                    <div className="border-t border-gray-100 pt-3">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{contentType === 'email' ? 'Subject Line' : 'Headline'}</p>
+                      <p className="text-sm font-medium text-navy-900">{contentResult.headline}</p>
+                    </div>
+                  )}
+
+                  {contentResult.cta && (
+                    <div className="border-t border-gray-100 pt-3">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Call to Action</p>
+                      <span className="inline-block bg-brand-50 text-brand-700 text-sm px-3 py-1 rounded-full font-medium">{contentResult.cta}</span>
+                    </div>
+                  )}
+
+                  {contentResult.hashtags && contentResult.hashtags.length > 0 && (
+                    <div className="border-t border-gray-100 pt-3">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Hashtags</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {contentResult.hashtags.map((tag) => (
+                          <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">#{tag}</span>
+                        ))}
+                      </div>
+                      <button onClick={() => navigator.clipboard.writeText(contentResult.hashtags!.map(t => `#${t}`).join(' '))} className="text-xs text-brand-600 hover:text-brand-700 mt-2">Copy hashtags</button>
+                    </div>
+                  )}
                 </div>
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed font-sans">{contentResult}</pre>
+
+                {/* Variants */}
+                {contentResult.variants && contentResult.variants.length > 0 && (
+                  <div className="card space-y-3">
+                    <p className="font-semibold text-navy-900 text-sm">Alternative Versions</p>
+                    {contentResult.variants.map((v, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-3 relative group">
+                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap pr-12">{v}</p>
+                        <button onClick={() => navigator.clipboard.writeText(v)} className="absolute top-2 right-2 text-xs text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
