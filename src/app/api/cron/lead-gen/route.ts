@@ -4,19 +4,21 @@
  * Runs daily at 7am. Scans public sources for people expressing
  * buying or selling intent, creates HubSpot contacts, fires outreach.
  *
- * Sources:
- * - Craigslist FSBO (seller leads with phone/email)
- * - FSBO.com (seller leads — more volume, more serious sellers)
+ * Active sources:
  * - Reddit intent signals (buyer/seller leads flagged for manual DM outreach)
+ * - City-Data forum threads (relocation/buyer leads)
+ * - Craigslist FSBO (seller leads — blocked by cloud IPs, use local script instead)
+ *
+ * Removed (blocked/broken):
+ * - FSBO.com — migrated to React SPA, HTML scraping no longer works
+ * - BiggerPockets — blocking all automated requests (403)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeCraigslistFSBO } from '@/lib/lead-gen/sources/craigslist';
-import { scrapeFsboCom } from '@/lib/lead-gen/sources/fsbo-com';
 import { scanRedditForLeads } from '@/lib/lead-gen/sources/reddit';
-import { scanBiggerPockets } from '@/lib/lead-gen/sources/biggerpockets';
 import { scanCityData } from '@/lib/lead-gen/sources/city-data';
-import { processCraigslistLeads, processFsboComLeads, processRedditLeads, processBiggerPocketsLeads, processCityDataLeads } from '@/lib/lead-gen/processor';
+import { processCraigslistLeads, processRedditLeads, processCityDataLeads } from '@/lib/lead-gen/processor';
 import { alertOwner } from '@/lib/sms/twilio';
 
 export const runtime = 'nodejs';
@@ -41,30 +43,6 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error('[LeadGen] Craigslist failed:', err);
     results.push({ source: 'craigslist-fsbo', created: 0, skipped: 0, errors: 1 });
-  }
-
-  // ── FSBO.com ────────────────────────────────────────────────────────────────
-  try {
-    const fsboLeads = await scrapeFsboCom();
-    const fsboResult = await processFsboComLeads(fsboLeads);
-    results.push(fsboResult);
-    totalCreated += fsboResult.created;
-    console.log(`[LeadGen] FSBO.com: ${fsboLeads.length} found, ${fsboResult.created} new, ${fsboResult.skipped} dupes`);
-  } catch (err) {
-    console.error('[LeadGen] FSBO.com failed:', err);
-    results.push({ source: 'fsbo-com', created: 0, skipped: 0, errors: 1 });
-  }
-
-  // ── BiggerPockets Investor Monitor ─────────────────────────────────────────
-  try {
-    const bpLeads = await scanBiggerPockets();
-    const bpResult = await processBiggerPocketsLeads(bpLeads);
-    results.push(bpResult);
-    totalCreated += bpResult.created;
-    console.log(`[LeadGen] BiggerPockets: ${bpLeads.length} signals, ${bpResult.created} prospects created`);
-  } catch (err) {
-    console.error('[LeadGen] BiggerPockets failed:', err);
-    results.push({ source: 'biggerpockets', created: 0, skipped: 0, errors: 1 });
   }
 
   // ── City-Data Forum Monitor ─────────────────────────────────────────────────
@@ -96,7 +74,7 @@ export async function GET(req: NextRequest) {
     const summary = results
       .map((r) => `${r.source}: ${r.created} new, ${r.skipped} dupes`)
       .join('\n');
-    await alertOwner(`📊 Dynasty Lead Gen — ${new Date().toLocaleDateString()}\n${totalCreated} new leads loaded to HubSpot:\n\n${summary}`).catch(console.error);
+    await alertOwner(`📊 ATR Lead Gen — ${new Date().toLocaleDateString()}\n${totalCreated} new leads loaded to HubSpot:\n\n${summary}`).catch(console.error);
   }
 
   return NextResponse.json({ date: new Date().toISOString(), totalCreated, results });
