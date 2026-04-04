@@ -47,20 +47,21 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
+          {/* Monogram circle — always solid, always visible */}
           <div className={cn(
-            'flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold font-serif transition-colors',
-            transparent ? 'bg-white/15 border border-white/30 text-white' : 'bg-brand-600 text-white'
+            'flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold font-serif shadow-md transition-all',
+            transparent ? 'bg-white text-brand-700' : 'bg-brand-600 text-white'
           )}>
             A
           </div>
           <div className="leading-none">
             <span className={cn(
-              'font-serif text-lg font-bold tracking-tight transition-colors',
+              'font-serif text-xl font-bold tracking-tight transition-colors drop-shadow-sm',
               transparent ? 'text-white' : 'text-navy-950'
             )}>Adreanne</span>
             <span className={cn(
-              'text-xs font-medium block -mt-0.5 transition-colors',
-              transparent ? 'text-white/70' : 'text-brand-600'
+              'text-xs font-semibold block tracking-wide uppercase transition-colors',
+              transparent ? 'text-white/90' : 'text-brand-600'
             )}>The Realtor</span>
           </div>
         </Link>
