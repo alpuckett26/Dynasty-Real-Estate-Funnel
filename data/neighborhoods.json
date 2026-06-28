@@ -1,0 +1,98 @@
+[
+  {
+    "slug": "mid-city",
+    "name": "Mid City",
+    "tagline": "Baton Rouge's creative heart",
+    "description": "Mid City is one of Baton Rouge's most eclectic and fast-growing neighborhoods. Known for its murals, local restaurants, and walkable streets, it attracts first-time buyers and investors who want character without the downtown price tag. Craftsman bungalows and renovated shotgun cottages sit alongside new construction infill.",
+    "medianPrice": "$285,000",
+    "priceChange": "+9.4%",
+    "walkScore": 78,
+    "highlights": ["Walk Score 78", "Avg. 12 days on market", "Strong first-time buyer market"],
+    "schools": ["Belfair Montessori School", "Tara High School", "Our Lady of Mercy Catholic School"],
+    "amenities": ["City Park", "Mid City Merchant District", "Red Stick Farmers Market", "Cocha Restaurant Row", "Roux Carre"]
+  },
+  {
+    "slug": "garden-district",
+    "name": "Garden District",
+    "tagline": "Historic charm, modern convenience",
+    "description": "Baton Rouge's Garden District blends grand historic homes with mature oaks and proximity to LSU and the medical corridor. The neighborhood's tree-canopied streets and classic architecture make it one of the most desirable zip codes in the city, with strong appreciation and low inventory.",
+    "medianPrice": "$375,000",
+    "priceChange": "+6.8%",
+    "walkScore": 72,
+    "highlights": ["Walk Score 72", "Strong appreciation history", "Top-rated dining nearby"],
+    "schools": ["Baton Rouge Magnet High School", "Broadmoor Middle School", "Wildwood Elementary"],
+    "amenities": ["Perkins Road Community Park", "Whole Foods Market", "Calandro's Supermarket", "Circa 1857", "LSU Campus"]
+  },
+  {
+    "slug": "zachary",
+    "name": "Zachary",
+    "tagline": "Top-rated schools, small-town feel",
+    "description": "Zachary is consistently ranked among Louisiana's top school districts and is a top destination for growing families. Located north of Baton Rouge, it offers larger lots, newer construction, and a strong community identity — all at prices well below the city average.",
+    "medianPrice": "$310,000",
+    "priceChange": "+5.2%",
+    "walkScore": 35,
+    "highlights": ["#1 rated school district in BR area", "Avg. lot size 0.4 acres", "New construction available"],
+    "schools": ["Zachary High School (A+ rated)", "Zachary Middle School", "Northwestern Elementary"],
+    "amenities": ["Zachary Community Park", "Main Street shops", "Springhill Golf Course", "Easy I-110 access", "Youth sports leagues"]
+  },
+  {
+    "slug": "prairieville",
+    "name": "Prairieville",
+    "tagline": "Space to grow, easy commute",
+    "description": "Prairieville has emerged as one of the fastest-growing communities in the Greater Baton Rouge area. Situated in Ascension Parish, it offers spacious new construction homes, top schools, and an easy commute — making it a consistent favorite for move-up buyers.",
+    "medianPrice": "$330,000",
+    "priceChange": "+7.1%",
+    "walkScore": 28,
+    "highlights": ["Fastest-growing BR suburb", "Ascension Parish schools", "New construction incentives available"],
+    "schools": ["Dutchtown High School", "Galvez Middle School", "Bluff Ridge Elementary"],
+    "amenities": ["Cabela's", "Walmart Supercenter", "Galvez Sports Complex", "Prairieville Branch Library", "Easy Hwy 73 access"]
+  },
+  {
+    "slug": "denham-springs",
+    "name": "Denham Springs",
+    "tagline": "Affordable, growing, and close to it all",
+    "description": "Denham Springs in Livingston Parish offers some of the most affordable home prices in the metro area with strong community growth and new development. Buyers get more space for their dollar — and the city's revitalized antique district has made it a hidden gem.",
+    "medianPrice": "$265,000",
+    "priceChange": "+4.9%",
+    "walkScore": 32,
+    "highlights": ["Most affordable metro entry point", "Livingston Parish schools", "Antique District revitalization"],
+    "schools": ["Denham Springs High School", "Denham Springs Middle School", "Live Oak Elementary"],
+    "amenities": ["Antique Village", "Walmart Supercenter", "Stringer Road shopping", "Bass Pro Shops", "Easy I-12 access"]
+  },
+  {
+    "slug": "central",
+    "name": "Central",
+    "tagline": "A community built around family",
+    "description": "Central is a small, incorporated city northeast of Baton Rouge that is fiercely proud of its schools, its tight-knit community, and its quiet suburban lifestyle. It's a top choice for buyers seeking excellent public schools, newer homes, and a true neighborhood feel away from city traffic.",
+    "medianPrice": "$295,000",
+    "priceChange": "+5.6%",
+    "walkScore": 22,
+    "highlights": ["Central Community School System (A)", "Low crime rate", "Strong resale values"],
+    "schools": ["Central High School", "Central Middle School", "Tanglewood Elementary"],
+    "amenities": ["Sullivan Road corridor", "Central Park", "Central Athletic Complex", "Greenwell Springs Library", "Youth recreational leagues"]
+  },
+  {
+    "slug": "downtown-baton-rouge",
+    "name": "Downtown Baton Rouge",
+    "tagline": "The city's pulse — walkable and vibrant",
+    "description": "Downtown Baton Rouge is undergoing a major renaissance, with new loft conversions, rooftop bars, and the Shaw Center for the Arts anchoring a growing arts and dining scene. For buyers who want to walk to work, restaurants, and the Mississippi River levee, downtown offers urban living at a value.",
+    "medianPrice": "$245,000",
+    "priceChange": "+11.2%",
+    "walkScore": 88,
+    "highlights": ["Walk Score 88", "Highest appreciation rate in metro", "Strong rental demand"],
+    "schools": ["Louisiana School for the Visually Impaired", "Baton Rouge Magnet High School (nearby)", "Inspire Academy"],
+    "amenities": ["Shaw Center for the Arts", "Repentance Park", "Catfish Town", "Louisiana State Capitol", "Multiple rooftop venues", "Mississippi River levee trail"]
+  },
+  {
+    "slug": "shenandoah",
+    "name": "Shenandoah",
+    "tagline": "Established community, easy everything",
+    "description": "Shenandoah is one of Baton Rouge's most established neighborhoods — known for mature trees, well-maintained subdivision lots, and proximity to the Perkins Road corridor. It's a sweet spot for buyers who want a solid home in a proven neighborhood without the premium of the Garden District.",
+    "medianPrice": "$315,000",
+    "priceChange": "+4.3%",
+    "walkScore": 52,
+    "highlights": ["Established subdivision streets", "Strong resale history", "Easy I-10/I-12 access"],
+    "schools": ["Woodlawn High School", "Westdale Middle School", "Shenandoah Elementary"],
+    "amenities": ["Siegen Lane Marketplace", "Perkins Rowe", "Whole Foods Market", "BREC parks", "Multiple fitness centers"]
+  }
+]

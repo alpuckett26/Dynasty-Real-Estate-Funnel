@@ -11,6 +11,7 @@ import {
   isWithinQuietHours,
   sanitizeAIOutput,
 } from '@/lib/utils/compliance';
+import { runGuardrailCheck, resolveGuardrailedText } from '@/lib/utils/guardrail';
 import { NURTURE_AGENT_PROMPT } from '@/lib/prompts';
 import type { NurtureAgentInput, NurtureAgentOutput } from '@/types/agent';
 
@@ -69,9 +70,18 @@ Write a ${input.preferredChannel === 'email' ? 'email' : 'SMS'} reactivation mes
     return { shouldSend: false, channel: 'none', body: '' };
   }
 
+  // Layer 1: regex compliance check
   const { safe, flags } = sanitizeAIOutput(parsed.body);
   if (!safe) {
-    console.warn('[NurtureAgent] Compliance flags:', flags, '— message suppressed');
+    console.warn('[NurtureAgent] Regex compliance flags:', flags, '— message suppressed');
+    return { shouldSend: false, channel: 'none', body: '' };
+  }
+
+  // Layer 2: LLM semantic guardrail check
+  const guardrail = await runGuardrailCheck(parsed.body);
+  const finalBody = resolveGuardrailedText(parsed.body, guardrail);
+  if (finalBody === null) {
+    console.error('[NurtureAgent] Guardrail blocked message — flags:', guardrail.flags);
     return { shouldSend: false, channel: 'none', body: '' };
   }
 
@@ -79,7 +89,7 @@ Write a ${input.preferredChannel === 'email' ? 'email' : 'SMS'} reactivation mes
     shouldSend: true,
     channel: input.preferredChannel,
     subject: parsed.subject,
-    body: parsed.body,
+    body: finalBody,
     sequenceId: `reactivation-${input.leadRoute}-${input.daysSinceLastInteraction}d`,
   };
 }

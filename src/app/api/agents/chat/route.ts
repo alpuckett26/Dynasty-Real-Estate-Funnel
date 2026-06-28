@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { handleChatTurn, createSession } from '@/lib/agents/supervisor';
 import { isOptOutMessage } from '@/lib/utils/compliance';
-import type { SupervisorState } from '@/types/agent';
-
-// In production, use Redis or a DB for session storage
-const sessions = new Map<string, SupervisorState>();
+import { getSession, setSession } from '@/lib/utils/session-store';
 
 const ChatRequestSchema = z.object({
   message: z.string().min(1).max(2000),
@@ -17,7 +14,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { message, sessionId } = ChatRequestSchema.parse(body);
 
-    // Opt-out check
     if (isOptOutMessage(message)) {
       return NextResponse.json({
         reply:
@@ -27,20 +23,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Get or create session
-    let state = sessionId ? sessions.get(sessionId) : undefined;
-    if (!state) {
-      state = createSession();
-    }
+    const state = (sessionId ? await getSession(sessionId) : null) ?? createSession();
 
     const { state: nextState, reply, bookingPrompt } = await handleChatTurn(state, message);
-    sessions.set(nextState.sessionId, nextState);
-
-    // Clean up old sessions (simple TTL — use Redis TTL in production)
-    if (sessions.size > 10_000) {
-      const firstKey = sessions.keys().next().value;
-      if (firstKey) sessions.delete(firstKey);
-    }
+    await setSession(nextState.sessionId, nextState);
 
     return NextResponse.json({
       reply,

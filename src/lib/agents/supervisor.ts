@@ -13,8 +13,13 @@ import { runCRMActionAgent } from './crm-action-agent';
 import { runNurtureAgent } from './nurture-agent';
 import { createAuditEntry } from '@/lib/utils/audit';
 import { notifyHotLead } from '@/lib/notifications/slack';
+import { runGuardrailCheck, resolveGuardrailedText } from '@/lib/utils/guardrail';
 import type { SupervisorState, SupervisorDecision, AgentName } from '@/types/agent';
 import type { InboundCaptureEvent, ConversationMessage, LeadContact } from '@/types/lead';
+
+const SAFE_CHAT_FALLBACK =
+  "I'd love to help — let me connect you with Adreanne directly. You can book a free call at " +
+  (process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://adreannetherealtor.com/book');
 
 export function createSession(): SupervisorState {
   return {
@@ -46,14 +51,22 @@ export async function handleChatTurn(
     capturedContact,
   });
 
+  // Guardrail check on the chat reply before it reaches the user
+  const guardrail = await runGuardrailCheck(convoResult.reply);
+  const safeReply = resolveGuardrailedText(convoResult.reply, guardrail) ?? SAFE_CHAT_FALLBACK;
+  const guardrailFlags = [
+    ...(convoResult.shouldEscalate ? ['escalation'] : []),
+    ...guardrail.flags,
+  ];
+
   createAuditEntry({
     sessionId: state.sessionId,
     agent: 'conversation',
     inputSummary: `userMessage: ${userMessage.slice(0, 100)}`,
-    outputSummary: `reply: ${convoResult.reply.slice(0, 100)}`,
+    outputSummary: `reply: ${safeReply.slice(0, 100)}`,
     startTime: start,
-    guardrailFlags: convoResult.shouldEscalate ? ['escalation'] : [],
-    humanReviewRequired: convoResult.shouldEscalate,
+    guardrailFlags,
+    humanReviewRequired: convoResult.shouldEscalate || guardrail.severity === 'block',
   });
 
   // Update state
@@ -77,7 +90,7 @@ export async function handleChatTurn(
     nextState.completedAgents = [...nextState.completedAgents, 'qualification', 'crm-action'];
   }
 
-  return { state: nextState, reply: convoResult.reply, bookingPrompt };
+  return { state: nextState, reply: safeReply, bookingPrompt };
 }
 
 /**

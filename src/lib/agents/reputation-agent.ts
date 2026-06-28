@@ -8,6 +8,7 @@
 
 import { chatCompletion } from '@/lib/openai/client';
 import { validateConsentBeforeSend, sanitizeAIOutput } from '@/lib/utils/compliance';
+import { runGuardrailCheck, resolveGuardrailedText } from '@/lib/utils/guardrail';
 import { REPUTATION_AGENT_PROMPT } from '@/lib/prompts';
 
 export type ReputationMessageType = 'review_request' | 'referral_ask' | 'anniversary';
@@ -74,9 +75,18 @@ Write the ${messageType} message for the ${input.preferredChannel} channel.
     return { shouldSend: false, messageType, channel: 'none', body: '' };
   }
 
+  // Layer 1: regex compliance check
   const { safe, flags } = sanitizeAIOutput(parsed.body);
   if (!safe) {
-    console.warn('[ReputationAgent] Compliance flags:', flags);
+    console.warn('[ReputationAgent] Regex compliance flags:', flags);
+    return { shouldSend: false, messageType, channel: 'none', body: '' };
+  }
+
+  // Layer 2: LLM semantic guardrail check
+  const guardrail = await runGuardrailCheck(parsed.body);
+  const finalBody = resolveGuardrailedText(parsed.body, guardrail);
+  if (finalBody === null) {
+    console.error('[ReputationAgent] Guardrail blocked message — flags:', guardrail.flags);
     return { shouldSend: false, messageType, channel: 'none', body: '' };
   }
 
@@ -85,6 +95,6 @@ Write the ${messageType} message for the ${input.preferredChannel} channel.
     messageType: parsed.messageType ?? messageType,
     channel: parsed.channel as ReputationAgentOutput['channel'],
     subject: parsed.subject,
-    body: parsed.body,
+    body: finalBody,
   };
 }

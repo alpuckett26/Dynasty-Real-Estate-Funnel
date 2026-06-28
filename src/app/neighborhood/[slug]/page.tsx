@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { MapPin, School, Coffee, TreePine, TrendingUp } from 'lucide-react';
 import { LeadForm } from '@/components/forms/LeadForm';
+import neighborhoodsData from '../../../../data/neighborhoods.json';
 
-// Static neighborhood data — in production, fetch from CMS or DB
-const NEIGHBORHOODS: Record<string, {
+interface Neighborhood {
+  slug: string;
   name: string;
   tagline: string;
   description: string;
@@ -13,53 +15,13 @@ const NEIGHBORHOODS: Record<string, {
   highlights: string[];
   schools: string[];
   amenities: string[];
-}> = {
-  downtown: {
-    name: 'Downtown Core',
-    tagline: 'Urban living at its finest',
-    description: 'The heartbeat of the city. Downtown offers a walkable lifestyle with world-class dining, entertainment, and easy access to major employers. Loft-style condos, historic brownstones, and modern high-rises define the landscape.',
-    medianPrice: '$485,000',
-    priceChange: '+8.2%',
-    walkScore: 95,
-    highlights: ['Walk Score 95', 'Avg. 8 days on market', 'Strong rental demand'],
-    schools: ['Metro Arts High School', 'Downtown Preparatory Academy', 'City Learning Center'],
-    amenities: ['Whole Foods', 'Trader Joe\'s', 'Riverfront Park', 'Metro Station', 'Farmers Market', 'Multiple gyms'],
-  },
-  midtown: {
-    name: 'Midtown',
-    tagline: 'The perfect work-life balance',
-    description: 'Midtown strikes the ideal balance between urban energy and residential calm. Tree-lined streets, boutique shops, and a thriving restaurant scene make it one of the city\'s most sought-after neighborhoods.',
-    medianPrice: '$395,000',
-    priceChange: '+5.7%',
-    walkScore: 82,
-    highlights: ['Walk Score 82', 'Top-rated elementary schools', 'Strong appreciation'],
-    schools: ['Midtown Elementary', 'Central Middle School', 'City Preparatory High'],
-    amenities: ['Whole Foods', 'Midtown Park', 'Community Pool', 'Coffee shops', 'Yoga studios'],
-  },
-  suburbs: {
-    name: 'Suburbs North',
-    tagline: 'Spacious living with top schools',
-    description: 'Families love the Suburbs North for its excellent schools, large lots, and quiet streets. With easy highway access and a welcoming community, it\'s the ideal place to plant roots.',
-    medianPrice: '$560,000',
-    priceChange: '+4.1%',
-    walkScore: 42,
-    highlights: ['Top-rated school district', 'Avg. lot size 0.35 acres', 'Low crime rate'],
-    schools: ['North Elementary', 'Northview Middle School', 'North High School (A+ rated)'],
-    amenities: ['Target', 'Costco', 'Community Park', 'YMCA', 'Little League Fields'],
-  },
-};
+}
 
-const DEFAULT_NEIGHBORHOOD = {
-  name: 'Local Neighborhood',
-  tagline: 'Discover this community',
-  description: 'This is a thriving community with great amenities, convenient access, and strong real estate values. Contact our team for the latest market data and available listings.',
-  medianPrice: 'Contact us',
-  priceChange: 'N/A',
-  walkScore: 70,
-  highlights: ['Strong community', 'Great location', 'Active market'],
-  schools: ['Contact us for school info'],
-  amenities: ['Contact us for amenity details'],
-};
+const neighborhoods = neighborhoodsData as Neighborhood[];
+
+function getNeighborhood(slug: string): Neighborhood | undefined {
+  return neighborhoods.find((n) => n.slug === slug);
+}
 
 export async function generateMetadata({
   params,
@@ -67,7 +29,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const n = NEIGHBORHOODS[slug] ?? DEFAULT_NEIGHBORHOOD;
+  const n = getNeighborhood(slug);
+  if (!n) return { title: 'Neighborhood Not Found | Dynasty Real Estate' };
   return {
     title: `${n.name} Neighborhood Guide | Dynasty Real Estate`,
     description: `${n.tagline} — ${n.description.slice(0, 130)}...`,
@@ -76,7 +39,11 @@ export async function generateMetadata({
 
 export default async function NeighborhoodPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const n = NEIGHBORHOODS[slug] ?? { ...DEFAULT_NEIGHBORHOOD, name: slug.replace(/-/g, ' ') };
+  const n = getNeighborhood(slug);
+
+  if (!n) notFound();
+  // TypeScript control-flow: notFound() throws, so n is defined below
+  const hood = n!;
 
   return (
     <>
@@ -87,8 +54,8 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
             <MapPin className="h-4 w-4" />
             Neighborhood Guide
           </div>
-          <h1 className="font-serif text-4xl font-bold text-white md:text-5xl">{n.name}</h1>
-          <p className="mt-2 text-xl text-navy-300">{n.tagline}</p>
+          <h1 className="font-serif text-4xl font-bold text-white md:text-5xl">{hood.name}</h1>
+          <p className="mt-2 text-xl text-navy-300">{hood.tagline}</p>
         </div>
       </section>
 
@@ -96,9 +63,9 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
       <section className="bg-brand-600 py-6">
         <div className="container-wide flex flex-wrap gap-8 justify-center md:justify-start">
           {[
-            { label: 'Median Home Price', value: n.medianPrice },
-            { label: 'Year-over-Year Change', value: n.priceChange },
-            { label: 'Walk Score', value: `${n.walkScore}/100` },
+            { label: 'Median Home Price', value: hood.medianPrice },
+            { label: 'Year-over-Year Change', value: hood.priceChange },
+            { label: 'Walk Score', value: `${hood.walkScore}/100` },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-2xl font-serif font-bold text-white">{s.value}</p>
@@ -115,10 +82,10 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
           <div className="md:col-span-2 space-y-10">
             {/* Overview */}
             <div>
-              <h2 className="text-2xl font-serif font-bold text-navy-900 mb-4">About {n.name}</h2>
-              <p className="text-gray-700 leading-relaxed">{n.description}</p>
+              <h2 className="text-2xl font-serif font-bold text-navy-900 mb-4">About {hood.name}</h2>
+              <p className="text-gray-700 leading-relaxed">{hood.description}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {n.highlights.map((h) => (
+                {hood.highlights.map((h) => (
                   <span key={h} className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700">
                     <TrendingUp className="h-3 w-3" /> {h}
                   </span>
@@ -132,7 +99,7 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
                 <School className="h-5 w-5 text-brand-600" /> Schools
               </h2>
               <ul className="space-y-2">
-                {n.schools.map((s) => (
+                {hood.schools.map((s) => (
                   <li key={s} className="flex items-center gap-2 text-sm text-gray-700">
                     <div className="h-1.5 w-1.5 rounded-full bg-brand-600" />
                     {s}
@@ -147,7 +114,7 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
                 <Coffee className="h-5 w-5 text-brand-600" /> Nearby Amenities
               </h2>
               <div className="flex flex-wrap gap-2">
-                {n.amenities.map((a) => (
+                {hood.amenities.map((a) => (
                   <span key={a} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700">
                     <TreePine className="h-3 w-3 text-green-600" /> {a}
                   </span>
@@ -160,7 +127,7 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
           <div>
             <LeadForm
               source={`neighborhood-${slug}`}
-              heading={`Interested in ${n.name}?`}
+              heading={`Interested in ${hood.name}?`}
               subheading="Connect with an agent who knows this neighborhood inside and out."
               showTimeline
               showFinancing
@@ -178,8 +145,8 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
             '@context': 'https://schema.org',
             '@type': 'RealEstateAgent',
             name: 'Dynasty Real Estate',
-            areaServed: n.name,
-            description: n.description,
+            areaServed: hood.name,
+            description: hood.description,
           }),
         }}
       />
@@ -187,7 +154,6 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
   );
 }
 
-// Generate static paths for known neighborhoods
 export function generateStaticParams() {
-  return Object.keys(NEIGHBORHOODS).map((slug) => ({ slug }));
+  return neighborhoods.map((n) => ({ slug: n.slug }));
 }
