@@ -125,10 +125,7 @@ export async function searchContactsCreatedSince(sinceMs: number): Promise<Recen
   let after: string | undefined = '0';
 
   while (after !== undefined && contacts.length < 500) {
-    const page: {
-      results: Array<{ id: string; properties: Record<string, string | undefined> }>;
-      paging?: { next?: { after?: string } };
-    } = await client.crm.contacts.searchApi.doSearch({
+    const page = await client.crm.contacts.searchApi.doSearch({
       filterGroups: [
         {
           filters: [
@@ -146,7 +143,11 @@ export async function searchContactsCreatedSince(sinceMs: number): Promise<Recen
     });
 
     for (const r of page.results) {
-      contacts.push({ id: r.id, ...(r.properties as Omit<RecentContact, 'id'>) });
+      const props: Record<string, string | undefined> = {};
+      for (const [k, v] of Object.entries(r.properties)) {
+        props[k] = v ?? undefined;
+      }
+      contacts.push({ id: r.id, ...(props as Omit<RecentContact, 'id'>) });
     }
     after = page.paging?.next?.after;
   }
