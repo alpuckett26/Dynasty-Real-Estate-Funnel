@@ -106,6 +106,54 @@ export async function upsertContact(
   return { contactId, action: 'created' };
 }
 
+export interface RecentContact {
+  id: string;
+  firstname?: string;
+  lastname?: string;
+  email?: string;
+  phone?: string;
+  lead_route?: string;
+  channel_source?: string;
+  total_lead_score?: string;
+  createdate?: string;
+}
+
+/** Contacts created since the given epoch ms — powers the daily lead digest. */
+export async function searchContactsCreatedSince(sinceMs: number): Promise<RecentContact[]> {
+  const client = getClient();
+  const contacts: RecentContact[] = [];
+  let after: string | undefined = '0';
+
+  while (after !== undefined && contacts.length < 500) {
+    const page: {
+      results: Array<{ id: string; properties: Record<string, string | undefined> }>;
+      paging?: { next?: { after?: string } };
+    } = await client.crm.contacts.searchApi.doSearch({
+      filterGroups: [
+        {
+          filters: [
+            { propertyName: 'createdate', operator: 'GTE' as never, value: String(sinceMs) },
+          ],
+        },
+      ],
+      sorts: ['-createdate'] as never,
+      properties: [
+        'firstname', 'lastname', 'email', 'phone',
+        'lead_route', 'channel_source', 'total_lead_score', 'createdate',
+      ],
+      limit: 100,
+      after,
+    });
+
+    for (const r of page.results) {
+      contacts.push({ id: r.id, ...(r.properties as Omit<RecentContact, 'id'>) });
+    }
+    after = page.paging?.next?.after;
+  }
+
+  return contacts;
+}
+
 // ─── Deals ────────────────────────────────────────────────────────────────────
 
 export async function createDeal(
