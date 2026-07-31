@@ -1,10 +1,17 @@
 'use client';
 
+import { useEffect } from 'react';
 import Script from 'next/script';
+import { captureAttribution } from '@/lib/attribution';
 
 export function PixelScripts() {
   const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
   const ga4Id = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
+
+  // Record first-touch campaign params regardless of whether pixels are configured.
+  useEffect(() => {
+    captureAttribution();
+  }, []);
 
   return (
     <>

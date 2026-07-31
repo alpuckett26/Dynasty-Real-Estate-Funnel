@@ -10,6 +10,7 @@ import { runNurtureAgent } from '@/lib/agents/nurture-agent';
 import { sendSMS } from '@/lib/sms/twilio';
 import { sendEmail } from '@/lib/email/resend';
 import { updateContact } from '@/lib/hubspot/client';
+import { isAuthorizedCron } from '@/lib/utils/cron-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -17,8 +18,7 @@ export const maxDuration = 300;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret') ?? req.nextUrl.searchParams.get('secret');
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

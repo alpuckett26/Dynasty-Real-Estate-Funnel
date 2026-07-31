@@ -81,7 +81,7 @@ export function Header() {
             { href: '/buy', label: 'Buy' },
             { href: '/sell-your-home', label: 'Sell' },
             { href: '/relocate', label: 'Relocate' },
-            { href: '/neighborhood/downtown', label: 'Neighborhoods' },
+            { href: '/neighborhood/downtown-baton-rouge', label: 'Neighborhoods' },
           ].map((link) => (
             <Link
               key={link.href}
@@ -220,7 +220,7 @@ export function Header() {
             { href: '/buy', label: 'Buy a Home' },
             { href: '/sell-your-home', label: 'Sell My Home' },
             { href: '/relocate', label: 'Relocate' },
-            { href: '/neighborhood/downtown', label: 'Neighborhoods' },
+            { href: '/neighborhood/downtown-baton-rouge', label: 'Neighborhoods' },
           ].map((link) => (
             <Link
               key={link.href}

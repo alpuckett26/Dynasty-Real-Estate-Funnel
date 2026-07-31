@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { MapPin, School, Briefcase, Car, CheckCircle, Calendar } from 'lucide-react';
 import { LeadForm } from '@/components/forms/LeadForm';
+import neighborhoodsData from '../../../data/neighborhoods.json';
 
 export const metadata: Metadata = {
   title: 'Relocation Services | Moving to a New City?',
@@ -31,16 +33,9 @@ const RELOCATION_SERVICES = [
   },
 ];
 
-const CITIES = [
-  'Downtown Core',
-  'Midtown',
-  'Uptown',
-  'Suburbs North',
-  'Suburbs South',
-  'East Side',
-  'West Side',
-  'Arts District',
-];
+const NEIGHBORHOODS = (neighborhoodsData as { slug: string; name: string }[]).map(
+  ({ slug, name }) => ({ slug, name })
+);
 
 export default function RelocatePage() {
   return (
@@ -115,18 +110,15 @@ export default function RelocatePage() {
             <p className="section-subtitle">Detailed guides for every community in the area.</p>
           </div>
           <div className="flex flex-wrap gap-3 justify-center">
-            {CITIES.map((city) => {
-              const slug = city.toLowerCase().replace(/\s+/g, '-');
-              return (
-                <a
-                  key={city}
-                  href={`/neighborhood/${slug}`}
-                  className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white hover:bg-brand-50 hover:border-brand-300 hover:text-brand-700 transition-all"
-                >
-                  {city}
-                </a>
-              );
-            })}
+            {NEIGHBORHOODS.map(({ slug, name }) => (
+              <Link
+                key={slug}
+                href={`/neighborhood/${slug}`}
+                className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white hover:bg-brand-50 hover:border-brand-300 hover:text-brand-700 transition-all"
+              >
+                {name}
+              </Link>
+            ))}
           </div>
         </div>
       </section>

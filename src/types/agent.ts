@@ -25,6 +25,12 @@ export interface QualificationAgentInput {
   conversationHistory: ConversationMessage[];
   capturedContact: Partial<LeadContact>;
   source: string;
+  /**
+   * Structured fields captured directly by a form. Used to qualify the lead
+   * deterministically when the LLM is unavailable, so a provider outage never
+   * costs us the lead.
+   */
+  structuredFields?: Record<string, string>;
 }
 
 export interface QualificationAgentOutput extends LeadQualification {

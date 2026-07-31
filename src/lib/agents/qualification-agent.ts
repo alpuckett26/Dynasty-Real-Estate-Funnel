@@ -33,33 +33,29 @@ ${conversationText}
 Classify this lead.
 `.trim();
 
-  const raw = await chatCompletion(
-    [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: prompt },
-    ],
-    { temperature: 0.2, maxTokens: 800, jsonMode: true }
-  );
+  let raw = '';
+  let llmFailed = false;
+  try {
+    raw = await chatCompletion(
+      [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
+      ],
+      { temperature: 0.2, maxTokens: 800, jsonMode: true }
+    );
+  } catch (err) {
+    // Never let an LLM outage cost us the lead — fall back to the structured
+    // form fields and let the caller still write the contact to HubSpot.
+    console.error('[QualificationAgent] LLM call failed, using structured fallback:', err);
+    llmFailed = true;
+  }
 
   let parsed: Record<string, unknown>;
   try {
+    if (llmFailed) throw new Error('llm unavailable');
     parsed = JSON.parse(raw);
   } catch {
-    // Fallback to safe defaults
-    parsed = {
-      leadType: 'unknown',
-      timelineBucket: 'unknown',
-      financingStatus: 'unknown',
-      areasOfInterest: [],
-      budgetMin: null,
-      budgetMax: null,
-      requestedShowing: false,
-      requestedPricingConsult: false,
-      handoffRequired: false,
-      handoffReason: '',
-      crmSummary: 'Unable to parse conversation.',
-      recommendedNextAction: 'Manual review required.',
-    };
+    parsed = fallbackQualification(input, llmFailed);
   }
 
   // Compute scores via scoring engine
@@ -89,5 +85,45 @@ Classify this lead.
     crmSummary: (parsed.crmSummary as string) ?? '',
     recommendedNextAction: (parsed.recommendedNextAction as string) ?? '',
     rawResponse: raw,
+  };
+}
+
+/**
+ * Qualify from the structured form fields alone. Used when the LLM is
+ * unavailable or returns unparseable JSON. A form submission already carries
+ * timeline, financing, area, and budget, so this loses the free-text nuance
+ * but keeps the lead — and its routing — intact.
+ */
+function fallbackQualification(
+  input: QualificationAgentInput,
+  llmFailed: boolean
+): Record<string, unknown> {
+  const f = input.structuredFields ?? {};
+  const areas = (f.areasOfInterest ?? '')
+    .split(',')
+    .map((a) => a.trim())
+    .filter(Boolean);
+
+  const budgetMin = Number(f.budgetMin) || null;
+  const budgetMax = Number(f.budgetMax) || null;
+
+  const reason = llmFailed
+    ? 'Qualified from form fields only — AI enrichment was unavailable.'
+    : 'Qualified from form fields only — AI response could not be parsed.';
+
+  return {
+    leadType: f.intent || 'unknown',
+    timelineBucket: f.timeline || 'unknown',
+    financingStatus: f.financingStatus || 'unknown',
+    areasOfInterest: areas,
+    budgetMin,
+    budgetMax,
+    requestedShowing: false,
+    requestedPricingConsult: false,
+    // Flag for a human so a degraded lead is reviewed rather than sitting cold.
+    handoffRequired: true,
+    handoffReason: reason,
+    crmSummary: reason,
+    recommendedNextAction: 'Review the raw form submission and follow up manually.',
   };
 }

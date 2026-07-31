@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { trackLeadSubmit } from '@/components/layout/PixelScripts';
+import { getAttribution } from '@/lib/attribution';
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -224,11 +225,5 @@ export function LeadForm({
 }
 
 function getUtmParams() {
-  if (typeof window === 'undefined') return {};
-  const p = new URLSearchParams(window.location.search);
-  return {
-    utmSource: p.get('utm_source') ?? undefined,
-    utmMedium: p.get('utm_medium') ?? undefined,
-    utmCampaign: p.get('utm_campaign') ?? undefined,
-  };
+  return getAttribution();
 }

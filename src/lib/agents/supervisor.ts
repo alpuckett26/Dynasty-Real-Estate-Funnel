@@ -107,6 +107,7 @@ export async function handleInboundEvent(
     conversationHistory: event.conversationHistory ?? [],
     capturedContact: event.contact,
     source: event.source,
+    structuredFields: event.metadata,
   });
 
   createAuditEntry({

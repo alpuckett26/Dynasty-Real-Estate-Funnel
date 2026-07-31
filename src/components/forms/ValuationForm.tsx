@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CheckCircle, Loader2, TrendingUp } from 'lucide-react';
 import { trackLeadSubmit } from '@/components/layout/PixelScripts';
+import { getAttribution } from '@/lib/attribution';
 
 const schema = z.object({
   address: z.string().min(5, 'Please enter a valid address'),
@@ -26,6 +27,7 @@ type FormData = z.infer<typeof schema>;
 
 export function ValuationForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -33,33 +35,39 @@ export function ValuationForm() {
   } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { consentEmail: true } });
 
   async function onSubmit(data: FormData) {
-    const utmParams = typeof window !== 'undefined'
-      ? Object.fromEntries(new URLSearchParams(window.location.search))
-      : {};
+    setSubmitError(null);
+    const attribution = getAttribution();
 
-    const res = await fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        intent: 'seller',
-        areasOfInterest: data.address,
-        timeline: data.timelineToSell === 'just-curious' ? '12m+' : data.timelineToSell,
-        financingStatus: 'unknown',
-        message: `Address: ${data.address}. Bedrooms: ${data.bedrooms ?? 'N/A'}. Bathrooms: ${data.bathrooms ?? 'N/A'}. Sqft: ${data.sqft ?? 'N/A'}. Condition: ${data.condition ?? 'N/A'}.`,
-        consentEmail: data.consentEmail,
-        consentSms: data.consentSms,
-        source: 'form',
-        ...utmParams,
-      }),
-    });
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          intent: 'seller',
+          areasOfInterest: data.address,
+          timeline: data.timelineToSell === 'just-curious' ? '12m+' : data.timelineToSell,
+          financingStatus: 'unknown',
+          message: `Address: ${data.address}. Bedrooms: ${data.bedrooms ?? 'N/A'}. Bathrooms: ${data.bathrooms ?? 'N/A'}. Sqft: ${data.sqft ?? 'N/A'}. Condition: ${data.condition ?? 'N/A'}.`,
+          consentEmail: data.consentEmail,
+          consentSms: data.consentSms,
+          source: 'form',
+          ...attribution,
+        }),
+      });
 
-    if (res.ok) {
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
       trackLeadSubmit('seller');
       setSubmitted(true);
+    } catch (err) {
+      console.error('[ValuationForm] Submit failed:', err);
+      setSubmitError(
+        'We couldn\'t submit your request. Please try again, or call (225) 284-6854.'
+      );
     }
   }
 
@@ -170,6 +178,12 @@ export function ValuationForm() {
           <span>I agree to receive SMS updates. Reply STOP to opt out.</span>
         </label>
       </div>
+
+      {submitError && (
+        <p role="alert" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {submitError}
+        </p>
+      )}
 
       <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
         {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

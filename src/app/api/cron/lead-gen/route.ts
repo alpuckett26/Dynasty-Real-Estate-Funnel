@@ -20,13 +20,13 @@ import { scanRedditForLeads } from '@/lib/lead-gen/sources/reddit';
 import { scanCityData } from '@/lib/lead-gen/sources/city-data';
 import { processCraigslistLeads, processRedditLeads, processCityDataLeads } from '@/lib/lead-gen/processor';
 import { alertOwner } from '@/lib/sms/twilio';
+import { isAuthorizedCron } from '@/lib/utils/cron-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret') ?? req.nextUrl.searchParams.get('secret');
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

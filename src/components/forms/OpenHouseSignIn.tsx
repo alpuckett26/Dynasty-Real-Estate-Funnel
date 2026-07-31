@@ -26,6 +26,7 @@ interface OpenHouseSignInProps {
 
 export function OpenHouseSignIn({ eventId, propertyAddress }: OpenHouseSignInProps) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -36,17 +37,25 @@ export function OpenHouseSignIn({ eventId, propertyAddress }: OpenHouseSignInPro
   });
 
   async function onSubmit(data: FormData) {
-    await fetch('/api/webhooks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'open_house',
-        ...data,
-        eventId,
-        propertyAddress,
-      }),
-    });
-    setSubmitted(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch('/api/webhooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'open_house',
+          ...data,
+          eventId,
+          propertyAddress,
+        }),
+      });
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      setSubmitted(true);
+    } catch (err) {
+      // Never show a success screen for a sign-in that was not recorded.
+      console.error('[OpenHouseSignIn] Submit failed:', err);
+      setSubmitError('That didn\'t go through. Please tap Sign In again.');
+    }
   }
 
   if (submitted) {
@@ -112,6 +121,11 @@ export function OpenHouseSignIn({ eventId, propertyAddress }: OpenHouseSignInPro
           <span>I agree to receive SMS updates. Reply STOP to opt out.</span>
         </label>
       </div>
+      {submitError && (
+        <p role="alert" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {submitError}
+        </p>
+      )}
       <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
         {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
         Sign In

@@ -9,14 +9,14 @@ import { Client } from '@hubspot/api-client';
 import { processStep, LeadContext } from '@/lib/sequences/runner';
 import { updateContact } from '@/lib/hubspot/client';
 import { ALL_SEQUENCES } from '@/lib/sequences';
+import { isAuthorizedCron } from '@/lib/utils/cron-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   // Security: only allow Vercel cron or requests with CRON_SECRET
-  const secret = req.headers.get('x-cron-secret') ?? req.nextUrl.searchParams.get('secret');
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         ip: req.headers.get('x-forwarded-for') ?? undefined,
       },
       metadata: {
+        intent: data.intent,
         timeline: data.timeline,
         financingStatus: data.financingStatus,
         areasOfInterest: data.areasOfInterest ?? '',
