@@ -330,6 +330,87 @@
       ],
       "formField": false,
       "displayOrder": 2
+    },
+
+    {
+      "name": "credit_score_current",
+      "label": "Credit Score (Current)",
+      "groupName": "dynasty_lifecycle",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Most recently self-reported credit score from credit path check-in",
+      "formField": false,
+      "displayOrder": 3
+    },
+    {
+      "name": "credit_score_goal",
+      "label": "Credit Score Goal",
+      "groupName": "dynasty_lifecycle",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Target credit score for homeownership eligibility",
+      "formField": false,
+      "displayOrder": 4
+    },
+    {
+      "name": "credit_path_savings",
+      "label": "Down Payment Savings",
+      "groupName": "dynasty_lifecycle",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Current savings toward down payment — updated via credit path check-in",
+      "formField": false,
+      "displayOrder": 5
+    },
+    {
+      "name": "credit_path_savings_goal",
+      "label": "Down Payment Savings Goal",
+      "groupName": "dynasty_lifecycle",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Target savings amount for down payment",
+      "formField": false,
+      "displayOrder": 6
+    },
+    {
+      "name": "credit_path_debts",
+      "label": "Total Outstanding Debt",
+      "groupName": "dynasty_lifecycle",
+      "type": "number",
+      "fieldType": "number",
+      "description": "Total outstanding debt balance — used for DTI tracking",
+      "formField": false,
+      "displayOrder": 7
+    },
+    {
+      "name": "credit_path_checkin_date",
+      "label": "Credit Path Last Check-In",
+      "groupName": "dynasty_lifecycle",
+      "type": "datetime",
+      "fieldType": "date",
+      "description": "Date of the most recent credit path check-in submission",
+      "formField": false,
+      "displayOrder": 8
+    },
+    {
+      "name": "credit_path_enrolled_date",
+      "label": "Credit Path Enrolled Date",
+      "groupName": "dynasty_lifecycle",
+      "type": "datetime",
+      "fieldType": "date",
+      "description": "Date the contact was enrolled in the credit repair path program",
+      "formField": false,
+      "displayOrder": 9
+    },
+    {
+      "name": "credit_path_notes",
+      "label": "Credit Path Notes",
+      "groupName": "dynasty_lifecycle",
+      "type": "string",
+      "fieldType": "textarea",
+      "description": "Client notes from their most recent credit path check-in",
+      "formField": false,
+      "displayOrder": 10
     }
   ],
 
