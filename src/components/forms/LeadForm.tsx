@@ -87,12 +87,7 @@ export function LeadForm({
         <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
         <h3 className="text-xl font-semibold text-gray-900 mb-2">You&apos;re all set!</h3>
         <p className="text-gray-600 max-w-sm">{successMsg}</p>
-        <a
-          href={process.env.NEXT_PUBLIC_CALENDLY_URL ?? '/book'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary mt-6"
-        >
+        <a href="/book" className="btn-primary mt-6">
           Book a Free Consultation
         </a>
       </div>

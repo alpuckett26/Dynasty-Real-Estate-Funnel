@@ -14,6 +14,7 @@ import { enrollLead } from '@/lib/sequences/runner';
 import { sendSMS } from '@/lib/sms/twilio';
 import { sendEmail } from '@/lib/email/resend';
 import { createHmac } from 'crypto';
+import { BOOKING_URL } from '@/lib/site';
 import { findContactByEmailOrPhone, createContact, updateContact } from '@/lib/hubspot/client';
 import type { InboundCaptureEvent } from '@/types/lead';
 
@@ -260,7 +261,7 @@ export async function POST(req: NextRequest) {
 
       // Send immediate open house follow-up + enroll in buyer sequence
       const address = payload.propertyAddress ? ` at ${payload.propertyAddress}` : '';
-      const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://dynasty-real-estate-funnel.vercel.app/book';
+      const calendlyUrl = BOOKING_URL;
 
       if (payload.consentSms && payload.phone) {
         sendSMS(payload.phone, `Hi ${payload.firstName}! Thanks for visiting us today${address}. I'd love to answer any questions or schedule a private showing. Book a quick call here: ${calendlyUrl} — Adreanne, Dynasty Real Estate`).catch(console.error);

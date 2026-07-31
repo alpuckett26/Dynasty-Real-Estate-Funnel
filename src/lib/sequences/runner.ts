@@ -11,9 +11,8 @@ import { sendEmail } from '@/lib/email/resend';
 import { updateContact } from '@/lib/hubspot/client';
 import { getCurrentRates } from '@/lib/rates';
 import { selectSequence } from './index';
+import { BOOKING_URL } from '@/lib/site';
 import type { SequenceStep } from './index';
-
-const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://dynasty-real-estate-funnel.vercel.app/book';
 
 export interface LeadContext {
   contactId: string;
@@ -78,7 +77,7 @@ function substituteVars(
 ): string {
   let out = template
     .replace(/\{firstName\}/g, firstName)
-    .replace(/\{calendlyUrl\}/g, CALENDLY_URL);
+    .replace(/\{calendlyUrl\}/g, BOOKING_URL);
 
   if (rates) {
     out = out

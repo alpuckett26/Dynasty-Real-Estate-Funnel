@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { handleInboundEvent } from '@/lib/agents/supervisor';
 import { scoreLeadFromForm } from '@/lib/scoring/lead-scorer';
 import { enrollLead } from '@/lib/sequences/runner';
+import { BOOKING_URL } from '@/lib/site';
 import type { InboundCaptureEvent } from '@/types/lead';
 
 const LeadSubmitSchema = z.object({
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
         score.route === 'hot'
           ? "We've received your info and an agent will call you within 5 minutes!"
           : "Thanks! We'll be in touch soon with next steps.",
-      bookingUrl: process.env.NEXT_PUBLIC_CALENDLY_URL,
+      bookingUrl: BOOKING_URL,
     });
   } catch (err) {
     if (err instanceof z.ZodError) {

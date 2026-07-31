@@ -236,9 +236,7 @@ export function ChatWidget() {
             <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-center">
               <p className="text-xs font-medium text-brand-900 mb-2">Ready to talk to Adreanne directly?</p>
               <a
-                href={process.env.NEXT_PUBLIC_CALENDLY_URL ?? '/book'}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/book"
                 className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700 transition-colors"
               >
                 <Calendar className="h-3.5 w-3.5" />

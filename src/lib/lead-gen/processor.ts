@@ -14,8 +14,9 @@ import type { FsboComLead } from './sources/fsbo-com';
 import type { BiggerPocketsLead } from './sources/biggerpockets';
 import type { CityDataLead } from './sources/city-data';
 import type { RedditLead } from './sources/reddit';
+import { BOOKING_URL } from '@/lib/site';
 
-const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://dynasty-real-estate-funnel.vercel.app/book';
+const CALENDLY_URL = BOOKING_URL;
 
 export interface ProcessResult {
   source: string;

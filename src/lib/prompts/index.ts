@@ -10,6 +10,8 @@
  * - All outputs must be passed through sanitizeAIOutput() before sending externally
  */
 
+import { BOOKING_URL } from '@/lib/site';
+
 export const BROKERAGE_NAME = process.env.NEXT_PUBLIC_BROKERAGE_NAME ?? 'Dynasty Real Estate';
 export const AGENT_NAME = process.env.NEXT_PUBLIC_AGENT_NAME ?? 'Dynasty';
 
@@ -74,7 +76,7 @@ INFORMATION TO COLLECT (in whatever order feels natural — skip anything alread
 - Timeline
 
 ONCE YOU HAVE NAME + CONTACT INFO:
-Offer to connect them with Adreanne directly: "I can have Adreanne reach out to you — she's great with [their situation]. Want me to book a free call? ${process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://adreannetherealtor.com/book'}"
+Offer to connect them with Adreanne directly: "I can have Adreanne reach out to you — she's great with [their situation]. Want me to book a free call? ${BOOKING_URL}"
 
 WHEN ASKED ABOUT PRICING OR HOME VALUES:
 "Adreanne will give you a full market analysis on your call — she knows the Baton Rouge market really well. Want to lock in a free time with her?"

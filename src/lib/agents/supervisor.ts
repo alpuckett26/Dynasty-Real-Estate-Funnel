@@ -14,12 +14,13 @@ import { runNurtureAgent } from './nurture-agent';
 import { createAuditEntry } from '@/lib/utils/audit';
 import { notifyHotLead } from '@/lib/notifications/slack';
 import { runGuardrailCheck, resolveGuardrailedText } from '@/lib/utils/guardrail';
+import { BOOKING_URL } from '@/lib/site';
 import type { SupervisorState, SupervisorDecision, AgentName } from '@/types/agent';
 import type { InboundCaptureEvent, ConversationMessage, LeadContact } from '@/types/lead';
 
 const SAFE_CHAT_FALLBACK =
   "I'd love to help — let me connect you with Adreanne directly. You can book a free call at " +
-  (process.env.NEXT_PUBLIC_CALENDLY_URL ?? 'https://adreannetherealtor.com/book');
+  BOOKING_URL;
 
 export function createSession(): SupervisorState {
   return {
