@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { CheckCircle, Clock, Phone, Calendar } from 'lucide-react';
+import { CalendlyEmbed } from '@/components/ui/CalendlyEmbed';
 
 export const metadata: Metadata = {
   title: 'You\'re Registered | SMRG Real Estate',
@@ -75,18 +76,7 @@ async function ThankYouContent({
 
           {/* Calendar embed or fallback */}
           {calendlyUrl ? (
-            <>
-              <div
-                className="calendly-inline-widget rounded-2xl overflow-hidden shadow-lg border border-gray-100"
-                data-url={`${calendlyUrl}?hide_gdpr_banner=1&primary_color=b96614`}
-                style={{ minWidth: '320px', height: '700px' }}
-              />
-              <script
-                type="text/javascript"
-                src="https://assets.calendly.com/assets/external/widget.js"
-                async
-              />
-            </>
+            <CalendlyEmbed url={calendlyUrl} />
           ) : (
             <div className="card text-center max-w-md mx-auto shadow-lg">
               <Calendar className="h-12 w-12 text-brand-500 mx-auto mb-4" />
