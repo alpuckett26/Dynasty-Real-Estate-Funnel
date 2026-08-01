@@ -12,6 +12,43 @@ import type { HubSpotContactProperties, PipelineStage } from '@/types/crm';
 
 const PIPELINE_ID = process.env.HUBSPOT_PIPELINE_ID ?? 'default';
 
+/**
+ * HubSpot enum properties reject any value outside their option list, and the
+ * casing is not consistent between properties — lead_type wants "Unknown"
+ * while timeline wants "unknown". The qualification agent's values come from
+ * an LLM, so they cannot be trusted to match exactly.
+ *
+ * A single bad value used to fail the whole upsert, and the catch below then
+ * rewrote the contact with name and email only — silently discarding the
+ * score, route, consent, and UTM attribution. These coerce case-insensitively
+ * and fall back to the safe option instead.
+ */
+const LEAD_TYPE_OPTIONS = ['Unknown', 'Buyer', 'Seller', 'Partner', 'Both'] as const;
+const TIMELINE_OPTIONS = ['0-3m', '3-6m', '6-12m', '12m+', 'unknown'] as const;
+const LEAD_ROUTE_OPTIONS = ['Hot', 'Warm', 'Cold', 'Partner'] as const;
+const FINANCING_OPTIONS = ['Pre-approved', 'Cash', 'Not yet', 'Unknown'] as const;
+const CHANNEL_OPTIONS = [
+  'ig-dm', 'messenger', 'website-chat', 'form', 'ads',
+  'open-house', 'referral', 'call', 'unknown',
+] as const;
+
+function toEnum<T extends readonly string[]>(
+  value: unknown,
+  allowed: T,
+  fallback: T[number]
+): T[number] {
+  if (typeof value !== 'string' || !value) return fallback;
+  const match = allowed.find((o) => o.toLowerCase() === value.trim().toLowerCase());
+  return match ?? fallback;
+}
+
+/** HubSpot rejects non-numeric strings; only send a clean number or nothing. */
+function toNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === '') return undefined;
+  const n = typeof value === 'number' ? value : Number(String(value).replace(/[$,\s]/g, ''));
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function stagFromRoute(
   route: string,
   leadType: string
@@ -35,17 +72,19 @@ export async function runCRMActionAgent(
     lastname: contact.lastName,
     email: contact.email,
     phone: contact.phone,
-    lead_type: capitalise(qualification.leadType) as HubSpotContactProperties['lead_type'],
-    areas_of_interest: qualification.areasOfInterest.join(', '),
-    budget_min: qualification.budgetMin,
-    budget_max: qualification.budgetMax,
-    timeline: qualification.timelineBucket as HubSpotContactProperties['timeline'],
-    financing_status: mapFinancing(qualification.financingStatus),
-    motivation_score: qualification.motivationScore,
-    urgency_score: qualification.urgencyScore,
-    total_lead_score: qualification.totalScore,
-    lead_route: capitalise(qualification.route) as HubSpotContactProperties['lead_route'],
-    channel_source: source,
+    lead_type: toEnum(qualification.leadType, LEAD_TYPE_OPTIONS, 'Unknown') as HubSpotContactProperties['lead_type'],
+    areas_of_interest: Array.isArray(qualification.areasOfInterest)
+      ? qualification.areasOfInterest.join(', ')
+      : String(qualification.areasOfInterest ?? ''),
+    budget_min: toNumber(qualification.budgetMin),
+    budget_max: toNumber(qualification.budgetMax),
+    timeline: toEnum(qualification.timelineBucket, TIMELINE_OPTIONS, 'unknown') as HubSpotContactProperties['timeline'],
+    financing_status: toEnum(mapFinancing(qualification.financingStatus), FINANCING_OPTIONS, 'Unknown'),
+    motivation_score: toNumber(qualification.motivationScore),
+    urgency_score: toNumber(qualification.urgencyScore),
+    total_lead_score: toNumber(qualification.totalScore),
+    lead_route: toEnum(qualification.route, LEAD_ROUTE_OPTIONS, 'Cold') as HubSpotContactProperties['lead_route'],
+    channel_source: toEnum(source, CHANNEL_OPTIONS, 'unknown') as HubSpotContactProperties['channel_source'],
     consent_sms: consent.sms,
     consent_email: consent.email,
     consent_dm: consent.dm,
@@ -65,13 +104,28 @@ export async function runCRMActionAgent(
   try {
     ({ contactId, action } = await upsertContact(contactProps));
   } catch (err) {
-    const standardProps: HubSpotContactProperties = {
+    // Losing the lead entirely is worse than losing its enrichment, so we still
+    // retry — but keep the fields that drive follow-up and attribution, and make
+    // the failure visible instead of swallowing it.
+    console.error('[CRMActionAgent] Full upsert failed, retrying reduced:', err);
+    const reducedProps: HubSpotContactProperties = {
       firstname: contact.firstName,
       lastname: contact.lastName,
       email: contact.email,
       phone: contact.phone,
+      consent_sms: consent.sms,
+      consent_email: consent.email,
+      consent_dm: consent.dm,
+      consent_timestamp: new Date().toISOString(),
+      last_meaningful_interaction: new Date().toISOString(),
+      utm_source: campaignMetadata?.utm_source,
+      utm_medium: campaignMetadata?.utm_medium,
+      utm_campaign: campaignMetadata?.utm_campaign,
+      ai_conversation_summary: `Enrichment failed to save — review manually. ${
+        err instanceof Error ? err.message : String(err)
+      }`.slice(0, 65000),
     };
-    ({ contactId, action } = await upsertContact(standardProps));
+    ({ contactId, action } = await upsertContact(reducedProps));
   }
 
   // Create deal for hot/warm leads (non-blocking)
