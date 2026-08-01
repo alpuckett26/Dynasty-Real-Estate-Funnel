@@ -4,6 +4,7 @@
  */
 
 import twilio from 'twilio';
+import { postSlackText } from '@/lib/notifications/slack-webhook';
 
 function getClient() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -32,14 +33,39 @@ export async function sendSMS(to: string, body: string): Promise<void> {
   );
 }
 
-/** Alert Adreanne directly — uses OWNER_PHONE env var */
+/**
+ * Alert Adreanne directly — SMS to OWNER_PHONE, falling back to Slack.
+ *
+ * SMS is the primary channel because it actually gets read, but it has a
+ * failure mode with no signal: an exhausted Twilio balance throws, and a
+ * swallowed error means hot-lead alerts stop arriving with nothing to notice.
+ * Slack is free and already configured, so a failed send degrades to a
+ * delivered-somewhere-else alert rather than silence.
+ */
 export async function alertOwner(body: string): Promise<void> {
   const ownerPhone = process.env.OWNER_PHONE;
-  if (!ownerPhone) return; // silently skip if not set
-  try {
-    await sendSMS(ownerPhone, body);
-  } catch (err) {
-    console.error('[OwnerAlert] SMS failed:', err);
+
+  if (ownerPhone) {
+    try {
+      await sendSMS(ownerPhone, body);
+      return;
+    } catch (err) {
+      console.error('[OwnerAlert] SMS failed, falling back to Slack:', err);
+      const delivered = await postSlackText(
+        `⚠️ SMS alert could not be delivered — sending here instead.\n` +
+          `Reason: ${err instanceof Error ? err.message : String(err)}\n\n${body}`
+      );
+      if (!delivered) {
+        console.error('[OwnerAlert] Slack fallback also failed. Alert lost:', body);
+      }
+      return;
+    }
+  }
+
+  // No phone configured — still try not to drop the alert.
+  const delivered = await postSlackText(body);
+  if (!delivered) {
+    console.error('[OwnerAlert] No OWNER_PHONE and no Slack webhook. Alert lost:', body);
   }
 }
 
