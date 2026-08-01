@@ -193,11 +193,11 @@ export function LeadForm({
         <div className="space-y-2 pt-1">
           <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
             <input {...register('consentEmail')} type="checkbox" className="mt-0.5" />
-            <span>I agree to receive email communications from Dynasty Real Estate.</span>
+            <span>I agree to receive email communications from SMRG Real Estate.</span>
           </label>
           <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
             <input {...register('consentSms')} type="checkbox" className="mt-0.5" />
-            <span>I agree to receive SMS text messages from Dynasty Real Estate. Message &amp; data rates may apply. Reply STOP to opt out.</span>
+            <span>I agree to receive SMS text messages from SMRG Real Estate. Message &amp; data rates may apply. Reply STOP to opt out.</span>
           </label>
         </div>
 

@@ -76,7 +76,7 @@ export async function processStep(
   } else if (step.channel === 'email' && ctx.consentEmail && ctx.email) {
     await sendEmail({
       to: ctx.email,
-      subject: substituteVars(step.subject ?? `Message from Dynasty Real Estate`, ctx.firstName, rates),
+      subject: substituteVars(step.subject ?? `Message from SMRG Real Estate`, ctx.firstName, rates),
       text: body,
     });
   }

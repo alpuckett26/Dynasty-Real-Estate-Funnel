@@ -36,9 +36,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { 'event-id': eventId } = await params;
   const event = getOpenHouse(eventId);
-  if (!event) return { title: 'Open House | Dynasty Real Estate', robots: { index: false } };
+  if (!event) return { title: 'Open House | SMRG Real Estate', robots: { index: false } };
   return {
-    title: `Open House: ${event.address} | Dynasty Real Estate`,
+    title: `Open House: ${event.address} | SMRG Real Estate`,
     description: `Join us for an open house at ${event.address} — ${event.bedrooms}BR/${event.bathrooms}BA, ${event.price}. ${event.startTime}–${event.endTime} on ${event.date}.`,
     robots: { index: false },
   };

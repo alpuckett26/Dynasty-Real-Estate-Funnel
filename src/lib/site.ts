@@ -20,7 +20,18 @@ export const SITE_URL = 'https://www.adreannetherealtor.com';
 export const BOOKING_URL = `${SITE_URL}/book`;
 
 export const AGENT_NAME = 'Adreanne Aranha';
-export const BROKERAGE_NAME = 'Dynasty Real Estate';
+
+/**
+ * The sponsoring broker Adreanne is licensed under. Louisiana requires agent
+ * advertising to identify the sponsoring broker, and consent must be given to
+ * the correctly named party — so this is the name that belongs in consent
+ * checkboxes, the privacy policy, terms, and outbound message signatures.
+ *
+ * "Dynasty" is team/brand naming and may remain in marketing copy, but it is
+ * not the brokerage and must never stand in for it.
+ */
+export const BROKERAGE_NAME = 'SMRG Real Estate';
+export const TEAM_NAME = 'Dynasty';
 export const AGENT_PHONE = '+1-225-284-6854';
 export const AGENT_EMAIL = 'adreanne@adreannetherealtor.com';
 

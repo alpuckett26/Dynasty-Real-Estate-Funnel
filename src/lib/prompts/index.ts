@@ -12,7 +12,7 @@
 
 import { BOOKING_URL } from '@/lib/site';
 
-export const BROKERAGE_NAME = process.env.NEXT_PUBLIC_BROKERAGE_NAME ?? 'Dynasty Real Estate';
+export const BROKERAGE_NAME = process.env.NEXT_PUBLIC_BROKERAGE_NAME ?? 'SMRG Real Estate';
 export const AGENT_NAME = process.env.NEXT_PUBLIC_AGENT_NAME ?? 'Dynasty';
 
 // ─── Shared Rules (injected into every agent) ─────────────────────────────────

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Phone, Mail, Instagram, Facebook } from 'lucide-react';
+import { BROKERAGE_NAME } from '@/lib/site';
 
 export function Footer() {
   return (
@@ -110,8 +111,9 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-navy-800">
           <p className="text-xs text-gray-600 leading-relaxed max-w-3xl">
-            Adreanne Aranha is a licensed real estate agent in Louisiana. Equal Housing Opportunity.
-            We do not discriminate on the basis of race, color, religion, national origin, sex, disability, or familial status.
+            Adreanne Aranha, REALTOR® — licensed in Louisiana, brokered by {BROKERAGE_NAME}.
+            Equal Housing Opportunity. We do not discriminate on the basis of race, color, religion,
+            national origin, sex, disability, or familial status.
           </p>
           <div className="mt-4 flex flex-wrap gap-5 text-xs text-gray-600">
             <span>© {new Date().getFullYear()} Adreanne The Realtor. All rights reserved.</span>

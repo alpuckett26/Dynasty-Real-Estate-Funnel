@@ -30,9 +30,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const n = getNeighborhood(slug);
-  if (!n) return { title: 'Neighborhood Not Found | Dynasty Real Estate' };
+  if (!n) return { title: 'Neighborhood Not Found | SMRG Real Estate' };
   return {
-    title: `${n.name} Neighborhood Guide | Dynasty Real Estate`,
+    title: `${n.name} Neighborhood Guide | SMRG Real Estate`,
     description: `${n.tagline} — ${n.description.slice(0, 130)}...`,
   };
 }
@@ -144,7 +144,7 @@ export default async function NeighborhoodPage({ params }: { params: Promise<{ s
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'RealEstateAgent',
-            name: 'Dynasty Real Estate',
+            name: 'SMRG Real Estate',
             areaServed: hood.name,
             description: hood.description,
           }),

@@ -269,12 +269,12 @@ export async function POST(req: NextRequest) {
       // follow-up and the nurture enrollment for every sign-in.
       try {
         if (payload.consentSms && payload.phone) {
-          await sendSMS(payload.phone, `Hi ${payload.firstName}! Thanks for visiting us today${address}. I'd love to answer any questions or schedule a private showing. Book a quick call here: ${calendlyUrl} — Adreanne, Dynasty Real Estate`);
+          await sendSMS(payload.phone, `Hi ${payload.firstName}! Thanks for visiting us today${address}. I'd love to answer any questions or schedule a private showing. Book a quick call here: ${calendlyUrl} — Adreanne Aranha, SMRG Real Estate`);
         } else if (payload.consentEmail && payload.email) {
           await sendEmail({
             to: payload.email,
             subject: `Thanks for visiting${address} today`,
-            text: `Hi ${payload.firstName},\n\nThank you for stopping by today${address}. We hope you loved it!\n\nIf you have any questions or want to schedule a private showing, book a quick call here: ${calendlyUrl}\n\nWe'd love to help you find your perfect home.\n\n— Adreanne & The Dynasty Team`,
+            text: `Hi ${payload.firstName},\n\nThank you for stopping by today${address}. We hope you loved it!\n\nIf you have any questions or want to schedule a private showing, book a quick call here: ${calendlyUrl}\n\nWe'd love to help you find your perfect home.\n\n— Adreanne Aranha, SMRG Real Estate`,
           });
         }
       } catch (err) {
@@ -316,7 +316,7 @@ export async function POST(req: NextRequest) {
               const phone = payload.contacts.find((x) => x.contactId === c.contactId);
               if (phone) await sendSMS(c.contactId, result.body).catch(console.error);
             } else if (result.channel === 'email' && result.body) {
-              await sendEmail({ to: c.contactId, subject: result.subject ?? 'Checking in — Dynasty', text: result.body }).catch(console.error);
+              await sendEmail({ to: c.contactId, subject: result.subject ?? 'Checking in — Adreanne Aranha, SMRG Real Estate', text: result.body }).catch(console.error);
             }
           }
           return result;

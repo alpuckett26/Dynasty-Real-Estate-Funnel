@@ -7,7 +7,7 @@ import neighborhoodsData from '../../../data/neighborhoods.json';
 export const metadata: Metadata = {
   title: 'Relocation Services | Moving to a New City?',
   description:
-    'Dynasty Real Estate\'s relocation specialists help you navigate your move with local expertise, neighborhood guides, and a seamless transition.',
+    'SMRG Real Estate\'s relocation specialists help you navigate your move with local expertise, neighborhood guides, and a seamless transition.',
 };
 
 const RELOCATION_SERVICES = [

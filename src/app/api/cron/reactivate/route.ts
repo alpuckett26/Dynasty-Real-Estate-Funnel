@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
       } else if (result.channel === 'email' && p.email) {
         await sendEmail({
           to: p.email,
-          subject: result.subject ?? 'Checking in from Dynasty Real Estate',
+          subject: result.subject ?? 'Checking in from SMRG Real Estate',
           text: result.body,
         });
       }

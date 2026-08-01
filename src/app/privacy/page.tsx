@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Privacy Policy',
-  description: 'Privacy Policy for Dynasty Real Estate',
+  description: 'Privacy Policy for SMRG Real Estate',
 };
 
 export default function PrivacyPage() {
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
 
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">3. SMS Communications</h2>
-          <p>By providing your phone number and checking the SMS consent box on our forms, you agree to receive text messages from Dynasty Real Estate. Message and data rates may apply. Message frequency varies. Reply <strong>STOP</strong> at any time to opt out. Reply <strong>HELP</strong> for help.</p>
+          <p>By providing your phone number and checking the SMS consent box on our forms, you agree to receive text messages from SMRG Real Estate. Message and data rates may apply. Message frequency varies. Reply <strong>STOP</strong> at any time to opt out. Reply <strong>HELP</strong> for help.</p>
           <p className="mt-2">We do not share your phone number with third parties for their marketing purposes.</p>
         </div>
 
@@ -49,7 +49,7 @@ export default function PrivacyPage() {
 
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">7. Contact</h2>
-          <p>Dynasty Real Estate<br />
+          <p>SMRG Real Estate<br />
           Phone: (225) 284-6854<br />
           Email: adreanne@dynastypartnersllc.com</p>
         </div>

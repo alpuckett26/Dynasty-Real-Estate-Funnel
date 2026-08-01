@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Terms and Conditions',
-  description: 'Terms and Conditions for Dynasty Real Estate',
+  description: 'Terms and Conditions for SMRG Real Estate',
 };
 
 export default function TermsPage() {
@@ -12,12 +12,12 @@ export default function TermsPage() {
       <section className="space-y-6 text-gray-700 leading-relaxed">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">1. Program Description</h2>
-          <p>Dynasty Real Estate provides real estate services including buyer representation, seller representation, and relocation assistance. By submitting a form on our website, you may receive follow-up communications via SMS and email.</p>
+          <p>SMRG Real Estate provides real estate services including buyer representation, seller representation, and relocation assistance. By submitting a form on our website, you may receive follow-up communications via SMS and email.</p>
         </div>
 
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">2. SMS Messaging Program</h2>
-          <p>When you opt in to SMS communications, you agree to receive text messages from Dynasty Real Estate at the phone number provided. Messages may include:</p>
+          <p>When you opt in to SMS communications, you agree to receive text messages from SMRG Real Estate at the phone number provided. Messages may include:</p>
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>Consultation reminders and confirmations</li>
             <li>Property updates and market information</li>
@@ -55,7 +55,7 @@ export default function TermsPage() {
 
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">8. Contact</h2>
-          <p>Dynasty Real Estate<br />
+          <p>SMRG Real Estate<br />
           Phone: (225) 284-6854<br />
           Email: adreanne@dynastypartnersllc.com</p>
         </div>

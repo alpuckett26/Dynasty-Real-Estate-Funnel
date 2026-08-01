@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CheckCircle, Clock, Phone, Calendar } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'You\'re Registered | Dynasty Real Estate',
+  title: 'You\'re Registered | SMRG Real Estate',
   description: 'Registration confirmed. Book your free consultation now.',
   robots: { index: false },
 };

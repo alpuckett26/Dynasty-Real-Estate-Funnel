@@ -85,7 +85,7 @@ export function sanitizeAIOutput(text: string): {
 }
 
 export const FAIR_HOUSING_FOOTER =
-  '\n\nDynasty Real Estate is an equal opportunity housing provider.';
+  '\n\nSMRG Real Estate is an equal opportunity housing provider.';
 
 export const SAFE_MESSAGING_GUIDELINES = `
 FAIR HOUSING GUIDELINES (MANDATORY):
