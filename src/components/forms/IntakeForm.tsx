@@ -6,6 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { trackLeadSubmit } from '@/components/layout/PixelScripts';
+import { getAttribution } from '@/lib/attribution';
 
 const schema = z
   .object({
@@ -106,6 +108,7 @@ export function IntakeForm({
 
     if (res.ok) {
       const json = await res.json();
+      trackLeadSubmit(data.intent);
       // Redirect to thank-you with name + booking URL
       const params = new URLSearchParams({
         name: data.firstName,
@@ -338,11 +341,5 @@ export function IntakeForm({
 }
 
 function getUtmParams() {
-  if (typeof window === 'undefined') return {};
-  const p = new URLSearchParams(window.location.search);
-  return {
-    utmSource: p.get('utm_source') ?? undefined,
-    utmMedium: p.get('utm_medium') ?? undefined,
-    utmCampaign: p.get('utm_campaign') ?? undefined,
-  };
+  return getAttribution();
 }

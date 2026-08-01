@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { trackLeadSubmit } from '@/components/layout/PixelScripts';
 
 const schema = z.object({
   firstName: z.string().min(1, 'Required'),
@@ -50,6 +51,7 @@ export function OpenHouseSignIn({ eventId, propertyAddress }: OpenHouseSignInPro
         }),
       });
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      trackLeadSubmit('open-house');
       setSubmitted(true);
     } catch (err) {
       // Never show a success screen for a sign-in that was not recorded.

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Calendar } from 'lucide-react';
+import { trackBookingComplete } from '@/components/layout/PixelScripts';
 
 interface CalendlyEmbedProps {
   url: string;
@@ -22,6 +23,20 @@ export function CalendlyEmbed({ url }: CalendlyEmbedProps) {
     return () => {
       // Don't remove on unmount — Calendly initializes once and is reused
     };
+  }, []);
+
+  // Calendly posts a message to the parent window when a booking is confirmed.
+  // This is the only signal we get — the booking itself happens inside the iframe.
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (!e.origin.endsWith('calendly.com')) return;
+      const data = e.data as { event?: string } | null;
+      if (data?.event === 'calendly.event_scheduled') {
+        trackBookingComplete();
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
 
   return (
