@@ -32,6 +32,23 @@ const CHANNEL_OPTIONS = [
   'open-house', 'referral', 'call', 'unknown',
 ] as const;
 
+/**
+ * Pages pass a granular source ("buy-page", "homepage", "register-fthb") that
+ * identifies the form, not the channel. None of those are valid
+ * channel_source options, so every browser form submission used to fail the
+ * upsert and fall back to name and email only. Map them to the channel they
+ * actually are; the granular value is preserved on the contact note.
+ */
+const PAGE_SOURCES = new Set([
+  'buy-page', 'get-ready', 'homepage', 'register-fthb',
+  'relocate-page', 'sell-your-home', 'sell', 'credit-path',
+]);
+
+function toChannelSource(source: string): HubSpotContactProperties['channel_source'] {
+  if (PAGE_SOURCES.has(source)) return 'form';
+  return toEnum(source, CHANNEL_OPTIONS, 'form') as HubSpotContactProperties['channel_source'];
+}
+
 function toEnum<T extends readonly string[]>(
   value: unknown,
   allowed: T,
@@ -84,7 +101,7 @@ export async function runCRMActionAgent(
     urgency_score: toNumber(qualification.urgencyScore),
     total_lead_score: toNumber(qualification.totalScore),
     lead_route: toEnum(qualification.route, LEAD_ROUTE_OPTIONS, 'Cold') as HubSpotContactProperties['lead_route'],
-    channel_source: toEnum(source, CHANNEL_OPTIONS, 'unknown') as HubSpotContactProperties['channel_source'],
+    channel_source: toChannelSource(source),
     consent_sms: consent.sms,
     consent_email: consent.email,
     consent_dm: consent.dm,

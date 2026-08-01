@@ -21,12 +21,22 @@ export async function runQualificationAgent(
 
   const contactText = JSON.stringify(input.capturedContact, null, 2);
 
+  // Form answers are the highest-signal input we have. Without them the model
+  // sees only a name and email and correctly returns "unknown" for everything,
+  // which scores every form lead as cold no matter what they selected.
+  const structured = input.structuredFields ?? {};
+  const structuredText = Object.entries(structured)
+    .filter(([k, v]) => v && !k.startsWith('utm_'))
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\n');
+
   const prompt = `
 Source: ${input.source}
 
 Captured Contact Info:
 ${contactText}
 
+${structuredText ? `Form Answers (authoritative — prefer these over inference):\n${structuredText}\n` : ''}
 Conversation:
 ${conversationText}
 
