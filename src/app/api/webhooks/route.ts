@@ -263,26 +263,38 @@ export async function POST(req: NextRequest) {
       const address = payload.propertyAddress ? ` at ${payload.propertyAddress}` : '';
       const calendlyUrl = BOOKING_URL;
 
-      if (payload.consentSms && payload.phone) {
-        sendSMS(payload.phone, `Hi ${payload.firstName}! Thanks for visiting us today${address}. I'd love to answer any questions or schedule a private showing. Book a quick call here: ${calendlyUrl} — Adreanne, Dynasty Real Estate`).catch(console.error);
-      } else if (payload.consentEmail && payload.email) {
-        sendEmail({
-          to: payload.email,
-          subject: `Thanks for visiting${address} today`,
-          text: `Hi ${payload.firstName},\n\nThank you for stopping by today${address}. We hope you loved it!\n\nIf you have any questions or want to schedule a private showing, book a quick call here: ${calendlyUrl}\n\nWe'd love to help you find your perfect home.\n\n— Adreanne & The Dynasty Team`,
-        }).catch(console.error);
+      // These must be awaited. Fire-and-forget work is not safe here: the
+      // platform may freeze the function as soon as the response is returned,
+      // discarding the pending promise. That silently dropped the open-house
+      // follow-up and the nurture enrollment for every sign-in.
+      try {
+        if (payload.consentSms && payload.phone) {
+          await sendSMS(payload.phone, `Hi ${payload.firstName}! Thanks for visiting us today${address}. I'd love to answer any questions or schedule a private showing. Book a quick call here: ${calendlyUrl} — Adreanne, Dynasty Real Estate`);
+        } else if (payload.consentEmail && payload.email) {
+          await sendEmail({
+            to: payload.email,
+            subject: `Thanks for visiting${address} today`,
+            text: `Hi ${payload.firstName},\n\nThank you for stopping by today${address}. We hope you loved it!\n\nIf you have any questions or want to schedule a private showing, book a quick call here: ${calendlyUrl}\n\nWe'd love to help you find your perfect home.\n\n— Adreanne & The Dynasty Team`,
+          });
+        }
+      } catch (err) {
+        console.error('[Webhooks] Open-house follow-up failed to send:', err);
       }
 
       // Enroll in buyer warm sequence for ongoing nurture
-      enrollLead({
-        contactId: result.hubspotContactId,
-        firstName: payload.firstName,
-        email: payload.email,
-        phone: payload.phone,
-        tags: ['Intent: Buyer', 'Lead Source: open-house'],
-        consentEmail: payload.consentEmail,
-        consentSms: payload.consentSms,
-      }).catch(console.error);
+      try {
+        await enrollLead({
+          contactId: result.hubspotContactId,
+          firstName: payload.firstName,
+          email: payload.email,
+          phone: payload.phone,
+          tags: ['Intent: Buyer', 'Lead Source: open-house'],
+          consentEmail: payload.consentEmail,
+          consentSms: payload.consentSms,
+        });
+      } catch (err) {
+        console.error('[Webhooks] Open-house sequence enrollment failed:', err);
+      }
 
       return NextResponse.json({ ok: true, ...result });
     }

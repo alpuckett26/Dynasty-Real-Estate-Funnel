@@ -6,6 +6,17 @@ import { enrollLead } from '@/lib/sequences/runner';
 import { BOOKING_URL } from '@/lib/site';
 import type { InboundCaptureEvent } from '@/types/lead';
 
+/**
+ * selectSequence routes on a "Timeline:" tag, but the form's timeline was never
+ * translated into one — so a buyer who selected "within 3 months" fell through
+ * to BUYER_WARM ("Buyer — 3–6 Months Out") and got the slow nurture track.
+ * Later buckets intentionally map to nothing: BUYER_WARM is the correct
+ * sequence for them.
+ */
+const TIMELINE_TAGS: Record<string, string> = {
+  '0-3m': 'Timeline: Now',
+};
+
 const LeadSubmitSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -95,15 +106,29 @@ export async function POST(req: NextRequest) {
     });
 
     // ── Enroll in nurture sequence ────────────────────────────────────────────
-    enrollLead({
-      contactId: result.hubspotContactId,
-      firstName: data.firstName,
-      email: data.email || undefined,
-      phone: data.phone || undefined,
-      tags: [`Intent: ${capitalise(data.intent)}`, `Lead Source: ${data.source}`],
-      consentEmail: data.consentEmail,
-      consentSms: data.consentSms,
-    }).catch(console.error);
+    // Must be awaited. Fire-and-forget work does not survive here: the platform
+    // is free to freeze the function the moment the response is returned, which
+    // killed this promise before it wrote the enrollment state. The lead then
+    // stayed invisible to the sequences cron and was never nurtured.
+    // Enrollment failures must not fail the request — the lead is already saved.
+    const timelineTag = TIMELINE_TAGS[data.timeline] ?? null;
+    try {
+      await enrollLead({
+        contactId: result.hubspotContactId,
+        firstName: data.firstName,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        tags: [
+          `Intent: ${capitalise(data.intent)}`,
+          `Lead Source: ${data.source}`,
+          ...(timelineTag ? [timelineTag] : []),
+        ],
+        consentEmail: data.consentEmail,
+        consentSms: data.consentSms,
+      });
+    } catch (err) {
+      console.error('[LeadsAPI] Sequence enrollment failed:', err);
+    }
 
     return NextResponse.json({
       success: true,
