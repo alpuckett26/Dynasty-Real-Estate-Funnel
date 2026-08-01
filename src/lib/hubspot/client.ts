@@ -196,6 +196,19 @@ export async function createTask(
   task: HubSpotTask
 ): Promise<string> {
   const client = getClient();
+
+  // HubSpot only notifies the *assigned* user. No call site passes an ownerId,
+  // so every task since April was created unassigned and silently notified
+  // nobody — including hot-lead call-now tasks. DEFAULT_TASK_OWNER_ID makes the
+  // assignee configurable without a deploy.
+  const ownerId = task.ownerId ?? process.env.HUBSPOT_DEFAULT_OWNER_ID ?? '';
+  if (!ownerId) {
+    console.warn(
+      `[HubSpot] Task "${task.subject}" created UNASSIGNED — nobody will be notified. ` +
+        'Set HUBSPOT_DEFAULT_OWNER_ID to the agent who should receive lead tasks.'
+    );
+  }
+
   const result = await client.crm.objects.tasks.basicApi.create({
     properties: {
       hs_task_subject: task.subject,
@@ -203,7 +216,7 @@ export async function createTask(
       hs_task_status: task.status,
       hs_task_type: task.taskType,
       hs_timestamp: String(task.dueDate),
-      hubspot_owner_id: task.ownerId ?? '',
+      hubspot_owner_id: ownerId,
     },
     associations: [
       {
