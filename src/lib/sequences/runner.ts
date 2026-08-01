@@ -26,10 +26,27 @@ export interface LeadContext {
 
 export async function enrollLead(ctx: LeadContext): Promise<void> {
   const sequence = selectSequence(ctx.tags);
-  if (!sequence) return;
+  if (!sequence) {
+    console.warn(
+      `[Sequences] No sequence matched tags [${ctx.tags.join(', ')}] — contact ${ctx.contactId} will not be nurtured.`
+    );
+    return;
+  }
 
-  // Fire step 0 immediately
-  await processStep(ctx, sequence.steps[0], sequence.id, 0);
+  // Send step 0 immediately, but never let a send failure abort enrollment.
+  // A bounced email or an empty Twilio balance used to throw here, before the
+  // sequence state was written — which left the contact invisible to the
+  // sequences cron (it queries on sequence_next_send_at) and therefore never
+  // nurtured again. Losing one message is recoverable; losing the enrollment
+  // is not.
+  try {
+    await processStep(ctx, sequence.steps[0], sequence.id, 0);
+  } catch (err) {
+    console.error(
+      `[Sequences] Step 0 of ${sequence.id} failed for contact ${ctx.contactId} — enrolling anyway:`,
+      err
+    );
+  }
 
   if (sequence.steps.length <= 1) return;
 
