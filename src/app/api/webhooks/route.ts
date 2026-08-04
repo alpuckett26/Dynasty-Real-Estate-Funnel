@@ -215,6 +215,23 @@ export async function POST(req: NextRequest) {
 
     if (payload.type === 'callrail') {
       const nameParts = (payload.callerName ?? '').split(' ');
+      const seconds = payload.callDurationSeconds ?? 0;
+
+      // Someone who searched, found us, and dialled is high intent — but a call
+      // carries no form fields, so the scorer saw nothing and buried them as
+      // cold. Describe the call so qualification has something real to read.
+      // Duration is the signal we do have: a sustained call is a conversation,
+      // a few seconds is a misdial or spam.
+      const engaged = seconds >= 60;
+      const callSummary = [
+        `Inbound phone call${seconds ? ` lasting ${Math.round(seconds / 60)}m ${seconds % 60}s` : ''}.`,
+        payload.utmSource ? `Campaign: ${payload.utmSource}${payload.utmCampaign ? ` / ${payload.utmCampaign}` : ''}.` : '',
+        payload.trackingNumber ? `Tracking number: ${payload.trackingNumber}.` : '',
+        engaged
+          ? 'The caller stayed on the line long enough to have a real conversation — treat as an active, high-intent prospect who reached out directly.'
+          : 'Very short call — may be a misdial, spam, or a hang-up. Verify before treating as a lead.',
+      ].filter(Boolean).join(' ');
+
       const event: InboundCaptureEvent = {
         type: 'call_event',
         source: 'call',
@@ -223,15 +240,31 @@ export async function POST(req: NextRequest) {
           lastName: nameParts.slice(1).join(' ') || undefined,
           phone: payload.callerNumber,
         },
-        conversationHistory: [],
+        conversationHistory: [
+          { role: 'user', content: callSummary, timestamp: new Date().toISOString() },
+        ],
         consent: { sms: false, email: false, dm: false, timestamp: new Date().toISOString() },
         metadata: {
+          // Calling in is itself a request to speak with an agent.
+          intent: 'unknown',
+          requestedShowing: engaged ? 'true' : 'false',
+          call_duration_seconds: String(seconds),
           utm_source: payload.utmSource ?? '',
           utm_campaign: payload.utmCampaign ?? '',
           tracking_number: payload.trackingNumber ?? '',
         },
       };
       const result = await handleInboundEvent(event);
+
+      // A real inbound call should never sit in the cold bucket. Floor it at
+      // warm so it gets timely follow-up rather than a 12-month drip.
+      if (engaged && result.route === 'cold') {
+        await updateContact(result.hubspotContactId, {
+          lead_route: 'Warm',
+          recommended_next_action: 'Return this call today — inbound caller from a search ad.',
+        } as never).catch(console.error);
+      }
+
       return NextResponse.json({ ok: true, ...result });
     }
 
