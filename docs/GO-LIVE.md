@@ -73,12 +73,33 @@ through CallRail → `/api/webhooks` (already handled).
 - Adreanne posts 3–4 reels/week with "comment HOME" CTAs — each becomes a
   permanent lead trap. This compounds: old reels keep producing.
 
-### Scraper cron (already running daily at 7am once deployed)
-- **Reddit intent monitor** + **City-Data forum monitor** run automatically and
-  load prospects into HubSpot tagged for manual outreach (no auto-DM — platform
-  rules). Craigslist FSBO is blocked from cloud IPs — run
-  `npm run leadgen:local` from a home machine weekly for FSBO seller leads.
-- Expect 2–10 prospects/day. These are colder; they feed the pipeline's top.
+### Scraper cron — ⚠️ ALL SOURCES DEAD, expect 0 leads
+Verified by live probe on **2026-08-15**. All three free sources are off by
+default; the evidence for each is in `src/lib/lead-gen/source-health.ts`.
+
+| Source | Status | Why |
+|---|---|---|
+| Reddit | HTTP 403 | Anonymous `.json` access closed; needs a registered OAuth app |
+| Craigslist FSBO | HTTP 403 | Blocked from home IPs too, so "run it locally" no longer works |
+| City-Data | HTTP 200, unusable | Forum filter ignored server-side — a Baton Rouge search returns national threads years old with no contact details |
+
+This was producing **nothing while reporting success**: each source swallowed its
+403 and the cron logged "0 found, 0 new, 0 errors". The cron now alerts Adreanne
+whenever an enabled source is blocked, so this can't recur silently.
+
+- **Do not budget any leads from this channel.** Purchased lists are the working
+  seller-lead path — see the next section.
+- To retest a source later, set `LEADGEN_ENABLE_REDDIT_MONITOR=true` (or
+  `..._CRAIGSLIST_FSBO`, `..._CITY_DATA`) in Vercel. The next 7am run will
+  report whether it works.
+- There is no `npm run leadgen:local` script; the manual equivalent is
+  `node scripts/scrape-leads.mjs`, which hits the same blocked sources.
+
+### Purchased seller lists (REDX) → the working replacement for the scrapers
+- Export a REDX CSV (FSBO, Expired, FRBO or Pre-Foreclosure) and POST it to
+  `/api/lead-gen/import`. Contacts land in HubSpot with a **call task** for
+  Adreanne rather than an automated text — purchased numbers have not consented
+  to marketing SMS, so this path deliberately does not text them.
 
 ### Open houses (every weekend event = 10–30 captured leads)
 - Add each event to `data/open-houses.json`, print the QR code to
@@ -104,7 +125,7 @@ through CallRail → `/api/webhooks` (already handled).
 |---|---|---|
 | Real-time | Hot lead (score ≥70) from any source | SMS to Adreanne + Slack, within seconds |
 | Real-time | Meta lead ad submission | HubSpot contact + instant sequence step 0 |
-| 7:00 AM | Scraper run summary | SMS if new prospects found |
+| 7:00 AM | Scraper health check | SMS **only** if an enabled source is blocked (all are off today, so silent) |
 | 9:00 AM | Sequence steps due today | Emails/SMS go out to leads |
 | 10:00 AM | Reactivation batch | Dormant leads get re-engagement touch |
 | 6:00 PM | **Daily Lead Digest** | Email + SMS + Slack: every lead from the last 24h, by source and temperature, hot ones listed with phone numbers |
@@ -124,3 +145,7 @@ immediately instead of discovered a week later.
 - [ ] Test: submit the site's intake form → confirm HubSpot contact + SMS alert
 - [ ] Test: `curl https://<domain>/api/cron/daily-digest?secret=<CRON_SECRET>`
       → confirm digest email/SMS arrives
+- [ ] Sanity-check the scrapers are honestly reported, not silently dead:
+      `curl https://<domain>/api/cron/lead-gen -H "x-cron-secret: <CRON_SECRET>"`
+      → every source should read `"health": "disabled"` and `"healthy": true`.
+      Any `"blocked"` or `"error"` means a source you enabled is not working.

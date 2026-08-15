@@ -4,29 +4,51 @@
  * Scrapes public forum posts from city-data.com for relocation and
  * homebuying intent signals in the Baton Rouge / Louisiana market.
  *
- * Target: people actively researching a move to the area — high intent,
- * early in their journey. They're asking locals for advice on neighborhoods,
- * schools, and the housing market.
+ * DISABLED as of 2026-08-15. The site is reachable (HTTP 200) but is not a
+ * usable lead source, for reasons no amount of parsing fixes:
  *
- * City-Data forums are fully public HTML — no auth required.
+ *   1. The forum filter is ignored server-side. `forumid=153` (Baton Rouge)
+ *      and `forumchoice[]=84` (Louisiana) both return national results — a live
+ *      probe for "moving to baton rouge" scoped to Baton Rouge came back with
+ *      threads on Florida politics, college football and Asheville, and not one
+ *      Louisiana thread in the top 30.
+ *   2. Results rank by thread activity, not recency; last posts ranged from
+ *      2022 to 2026 on a single page.
+ *   3. Forum posts carry no contact details, so every "lead" was a CRM record
+ *      with a username and no way to reach anyone.
+ *
+ * The parser below was still repaired rather than deleted: it had been matching
+ * absolute thread URLs that the site stopped emitting (it now uses relative
+ * hrefs), so it silently returned zero rows against a page of 603 results. The
+ * relevance and recency gates are the ones the broken server-side filter was
+ * supposed to provide. If this is ever re-enabled, it now parses real markup
+ * and refuses off-topic and stale threads rather than loading them into HubSpot.
+ *
  * Forum search: https://www.city-data.com/forum/search.php?query=...&forumid=...
- *
- * Key forums:
- * - Forum 153: Baton Rouge
- * - Forum 84:  Louisiana
- * - Forum 18:  Moving (national, filter by Louisiana mentions)
  */
+
+import {
+  classifyStatus,
+  disabledScan,
+  isSourceEnabled,
+  summariseHealth,
+  type SourceScan,
+} from '../source-health';
 
 export interface CityDataLead {
   title: string;
   body: string;
   author: string;
   url: string;
+  /** Forum slug the thread lives in, e.g. "baton-rouge". */
+  forum: string;
   intentType: 'buyer' | 'relocating' | 'unknown';
   intentScore: number; // 1–10
   postedAt: string;
   source: 'city-data';
 }
+
+const FORUM_BASE = 'https://www.city-data.com/forum/';
 
 const SEARCHES = [
   { query: 'moving to baton rouge', forumId: '153' },
@@ -36,6 +58,21 @@ const SEARCHES = [
   { query: 'moving to louisiana', forumId: '84' },
   { query: 'buying a home louisiana', forumId: '84' },
 ];
+
+/** Forum slugs that are actually in-market. */
+const LOUISIANA_FORUMS = [
+  'baton-rouge', 'louisiana', 'new-orleans', 'lafayette', 'shreveport',
+];
+
+/** Place names that make an off-forum thread still locally relevant. */
+const LOCATION_TERMS = [
+  'baton rouge', 'louisiana', 'denham springs', 'zachary', 'prairieville',
+  'gonzales', 'ascension parish', 'livingston parish', 'east baton rouge',
+  'walker la', 'central city la',
+];
+
+/** A thread whose last post is older than this is not a live prospect. */
+const MAX_AGE_DAYS = 60;
 
 const BUYER_KEYWORDS = [
   'looking to buy', 'want to buy', 'buying a home', 'buying a house',
@@ -51,13 +88,19 @@ const RELOCATION_KEYWORDS = [
   'any advice', 'what should i know', 'tips for moving',
 ];
 
-export async function scanCityData(): Promise<CityDataLead[]> {
+export async function scanCityData(): Promise<SourceScan<CityDataLead>> {
+  const source = 'city-data';
+  if (!isSourceEnabled(source)) return disabledScan<CityDataLead>(source);
+
   const leads: CityDataLead[] = [];
   const seenUrls = new Set<string>();
+  let requests = 0;
+  const failures = { blocked: 0, error: 0 };
 
   for (const search of SEARCHES) {
     try {
-      const url = `https://www.city-data.com/forum/search.php?query=${encodeURIComponent(search.query)}&forumid=${search.forumId}&do=process`;
+      const url = `${FORUM_BASE}search.php?query=${encodeURIComponent(search.query)}&forumid=${search.forumId}&do=process`;
+      requests++;
       const res = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -68,13 +111,22 @@ export async function scanCityData(): Promise<CityDataLead[]> {
         signal: AbortSignal.timeout(15_000),
       });
 
-      if (!res.ok) continue;
+      if (!res.ok) {
+        failures[classifyStatus(res.status)]++;
+        console.error(`[City-Data] "${search.query}" returned HTTP ${res.status}`);
+        continue;
+      }
+
       const html = await res.text();
       const posts = parseSearchResults(html);
 
       for (const post of posts) {
         if (seenUrls.has(post.url)) continue;
         seenUrls.add(post.url);
+
+        // The server-side forum filter does not work, so scope the results here.
+        if (!isLocallyRelevant(post)) continue;
+        if (!isRecent(post.postedAt)) continue;
 
         const combined = `${post.title} ${post.body}`.toLowerCase();
         const { intentType, score } = scoreIntent(combined);
@@ -84,57 +136,150 @@ export async function scanCityData(): Promise<CityDataLead[]> {
         }
       }
     } catch (err) {
+      failures.error++;
       console.error(`[City-Data] Failed for query "${search.query}":`, err);
     }
   }
 
-  return leads.sort((a, b) => b.intentScore - a.intentScore);
+  leads.sort((a, b) => b.intentScore - a.intentScore);
+
+  const { health, detail } = summariseHealth(requests, failures);
+  return { source, health, detail, leads, requests, failures: failures.blocked + failures.error };
 }
 
-interface RawPost {
+export interface RawPost {
   title: string;
   body: string;
   author: string;
   url: string;
+  forum: string;
   postedAt: string;
 }
 
+/**
+ * Parse a vBulletin search-results page.
+ *
+ * Works row-by-row rather than by scanning loose anchors: each result is one
+ * <tr> carrying the thread id, and the row is what ties a title to its author,
+ * date and forum. The previous anchor-scanning version matched pagination and
+ * navigation links as readily as threads, and required absolute URLs the site
+ * no longer emits.
+ */
 export function parseSearchResults(html: string): RawPost[] {
   const posts: RawPost[] = [];
 
-  const clean = html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '');
+  const rows = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) ?? [];
 
-  // Match full anchor tags linking to city-data forum threads
-  const threadLinks = clean.matchAll(/<a[^>]+href="(https?:\/\/www\.city-data\.com\/forum\/[^"]+\.html[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi);
+  for (const row of rows) {
+    // The anchor carrying id="thread_title_N" is the thread itself; the
+    // numbered anchors beside it are just page links into the same thread.
+    const link = row.match(
+      /<a[^>]+href="([^"]+\.html[^"]*)"[^>]*\bid="thread_title_\d+"[^>]*>([\s\S]*?)<\/a>/i
+    );
+    if (!link) continue;
 
-  for (const match of threadLinks) {
-    const url = match[1].split('#')[0]; // strip fragment
-    if (posts.some((p) => p.url === url)) continue;
+    const url = absoluteThreadUrl(link[1]);
+    if (!url || posts.some((p) => p.url === url)) continue;
 
-    // Title is the anchor text
-    const title = stripTags(match[2]).trim();
+    const title = decodeEntities(stripTags(link[2])).trim();
     if (!title || title.length < 10) continue;
 
-    // Grab surrounding context for body
-    const linkIndex = clean.indexOf(match[0]);
-    const surrounding = clean.slice(Math.max(0, linkIndex - 100), linkIndex + 800);
-
-    const body = stripTags(surrounding).replace(/\s+/g, ' ').trim().slice(0, 400);
-
-    // Author
-    const authorMatch = surrounding.match(/(?:by|posted by|author)[:\s]+([A-Za-z0-9_\-]+)/i);
-    const author = authorMatch ? authorMatch[1].trim() : 'Unknown';
-
-    // Date
-    const dateMatch = surrounding.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}|\w+ \d{1,2},?\s*\d{4})/);
-    const postedAt = dateMatch ? (() => { try { return new Date(dateMatch[0]).toISOString(); } catch { return new Date().toISOString(); } })() : new Date().toISOString();
-
-    posts.push({ title: title.slice(0, 200), body, author, url, postedAt });
+    posts.push({
+      title: title.slice(0, 200),
+      body: extractBody(row, title),
+      author: extractAuthor(row),
+      url,
+      forum: forumSlug(link[1]),
+      postedAt: extractLastPostDate(row),
+    });
   }
 
   return posts;
+}
+
+/**
+ * Thread hrefs are relative to /forum/ ("texas/12345-thread-title.html").
+ * Absolute URLs are still accepted so older captures keep parsing.
+ */
+function absoluteThreadUrl(href: string): string | null {
+  const clean = href.split('#')[0].split('?')[0].trim();
+  if (!clean.endsWith('.html')) return null;
+
+  if (/^https?:\/\//i.test(clean)) {
+    return clean.includes('city-data.com/forum/') ? clean : null;
+  }
+  if (clean.startsWith('/forum/')) return `https://www.city-data.com${clean}`;
+  if (clean.startsWith('/')) return null;
+
+  // Must look like "<forum-slug>/<thread-id>-<slug>.html"
+  if (!/^[a-z0-9\-]+\/\d+-/i.test(clean)) return null;
+  return `${FORUM_BASE}${clean}`;
+}
+
+function forumSlug(href: string): string {
+  const clean = href.split('#')[0].split('?')[0];
+  const withoutHost = clean.replace(/^https?:\/\/[^/]+\/forum\//i, '').replace(/^\/forum\//, '');
+  return withoutHost.split('/')[0] ?? '';
+}
+
+/**
+ * The row's title attribute holds the post preview, prefixed with the thread
+ * title. Strip that prefix so intent scoring is not double-counting the title.
+ */
+function extractBody(row: string, title: string): string {
+  const attr = row.match(/id="td_threadtitle_\d+"[^>]*\btitle="([^"]*)"/i);
+  if (!attr) return '';
+
+  let body = decodeEntities(attr[1]).replace(/\s+/g, ' ').trim();
+  if (body.toLowerCase().startsWith(title.toLowerCase())) {
+    body = body.slice(title.length).trim();
+  }
+  return body.slice(0, 400);
+}
+
+/**
+ * Thread starter sits in a bare <div class="smallfont"> inside the title cell.
+ * The last-post author lives in a similar div in the *next* cell, so this is
+ * anchored to the title cell to avoid picking up the wrong name.
+ */
+function extractAuthor(row: string): string {
+  const titleCell = row.match(/id="td_threadtitle_\d+"[\s\S]*?<\/td>/i);
+  const scope = titleCell ? titleCell[0] : row;
+
+  const divs = [...scope.matchAll(/<div class="smallfont"[^>]*>([\s\S]*?)<\/div>/gi)];
+  for (const div of divs) {
+    const name = decodeEntities(stripTags(div[1])).replace(/\s+/g, ' ').trim();
+    // Skip the pagination row ("1 2 3 ... Last Page")
+    if (!name || /^[\d\s.]+$/.test(name) || /last page/i.test(name)) continue;
+    if (name.length > 40) continue;
+    return name;
+  }
+  return 'Unknown';
+}
+
+/** Last-post date, formatted MM-DD-YYYY in the row's date cell. */
+function extractLastPostDate(row: string): string {
+  const match = row.match(/(\d{2})-(\d{2})-(\d{4})/);
+  if (!match) return new Date().toISOString();
+
+  const [, mm, dd, yyyy] = match;
+  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
+export function isLocallyRelevant(post: Pick<RawPost, 'forum' | 'title' | 'body'>): boolean {
+  if (LOUISIANA_FORUMS.includes(post.forum.toLowerCase())) return true;
+
+  const text = `${post.title} ${post.body}`.toLowerCase();
+  return LOCATION_TERMS.some((term) => text.includes(term));
+}
+
+export function isRecent(postedAt: string, maxAgeDays = MAX_AGE_DAYS): boolean {
+  const posted = new Date(postedAt).getTime();
+  if (Number.isNaN(posted)) return false;
+
+  const ageDays = (Date.now() - posted) / 86_400_000;
+  return ageDays <= maxAgeDays;
 }
 
 export function scoreIntent(text: string): { intentType: CityDataLead['intentType']; score: number } {
@@ -153,11 +298,17 @@ export function scoreIntent(text: string): { intentType: CityDataLead['intentTyp
 }
 
 function stripTags(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, '')
+  return html.replace(/<[^>]+>/g, ' ');
+}
+
+function decodeEntities(text: string): string {
+  return text
     .replace(/&amp;/g, '&')
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&#\d+;/g, '');
 }

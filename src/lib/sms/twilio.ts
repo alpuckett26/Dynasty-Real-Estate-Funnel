@@ -5,6 +5,7 @@
 
 import twilio from 'twilio';
 import { postSlackText } from '@/lib/notifications/slack-webhook';
+import { logSuppressed, outboundDisabled } from '@/lib/notifications/outbound-guard';
 
 function getClient() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -14,6 +15,12 @@ function getClient() {
 }
 
 export async function sendSMS(to: string, body: string): Promise<void> {
+  // Checked before credentials so a local run never texts a real person.
+  if (outboundDisabled()) {
+    logSuppressed('SMS', to, body);
+    return;
+  }
+
   const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
   const from = process.env.TWILIO_FROM_NUMBER;
   if (!messagingServiceSid && !from) {

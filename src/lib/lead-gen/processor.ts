@@ -25,6 +25,16 @@ export interface ProcessResult {
   errors: number;
 }
 
+/**
+ * `channel_source` is a HubSpot enumeration and only accepts the nine values in
+ * config/hubspot-properties.json. These processors were writing the scraper
+ * name into it ('craigslist-fsbo', 'reddit-monitor', 'city-data'), which HubSpot
+ * rejects — every contact creation here would have thrown. Scraped prospects
+ * are not an inbound channel, so they record as 'unknown' and carry their real
+ * origin in the free-text utm_source field instead.
+ */
+const SCRAPED_CHANNEL = 'unknown';
+
 // ─── Craigslist FSBO ─────────────────────────────────────────────────────────
 
 export async function processCraigslistLeads(leads: CraigslistLead[]): Promise<ProcessResult> {
@@ -43,7 +53,8 @@ export async function processCraigslistLeads(leads: CraigslistLead[]): Promise<P
         email: lead.email,
         phone: lead.phone,
         lead_type: 'Seller',
-        channel_source: 'craigslist-fsbo',
+        channel_source: SCRAPED_CHANNEL,
+        utm_source: 'craigslist-fsbo',
         lead_route: 'Warm',
         last_meaningful_interaction: new Date().toISOString(),
       });
@@ -95,7 +106,8 @@ export async function processFsboComLeads(leads: FsboComLead[]): Promise<Process
         email: lead.email,
         phone: lead.phone,
         lead_type: 'Seller',
-        channel_source: 'fsbo-com' as never,
+        channel_source: SCRAPED_CHANNEL,
+        utm_source: 'fsbo-com',
         lead_route: 'Warm',
         last_meaningful_interaction: new Date().toISOString(),
       });
@@ -153,7 +165,8 @@ export async function processBiggerPocketsLeads(leads: BiggerPocketsLead[]): Pro
         firstname: `BP: ${lead.author}`,
         lastname: `(${lead.intentType})`,
         lead_type: lead.intentType === 'seller' ? 'Seller' : 'Buyer',
-        channel_source: 'biggerpockets' as never,
+        channel_source: SCRAPED_CHANNEL,
+        utm_source: 'biggerpockets',
         lead_route: 'Warm',
         last_meaningful_interaction: new Date().toISOString(),
       });
@@ -183,7 +196,10 @@ export async function processBiggerPocketsLeads(leads: BiggerPocketsLead[]): Pro
 export async function processCityDataLeads(leads: CityDataLead[]): Promise<ProcessResult> {
   const result: ProcessResult = { source: 'city-data', created: 0, skipped: 0, errors: 0 };
 
-  const highIntent = leads.filter((l) => l.intentScore >= 4);
+  // A forum post with no identifiable author is not a lead — there is nobody to
+  // contact. These used to become HubSpot records named "CD: Unknown", which is
+  // pure CRM noise, so they are dropped before anything is created.
+  const highIntent = leads.filter((l) => l.intentScore >= 4 && hasUsableAuthor(l.author));
   if (highIntent.length === 0) return result;
 
   const alertLines = highIntent.slice(0, 5).map((l, i) =>
@@ -199,7 +215,8 @@ export async function processCityDataLeads(leads: CityDataLead[]): Promise<Proce
         firstname: `CD: ${lead.author}`,
         lastname: `(${lead.intentType})`,
         lead_type: 'Buyer',
-        channel_source: 'city-data' as never,
+        channel_source: SCRAPED_CHANNEL,
+        utm_source: 'city-data',
         lead_route: 'Warm',
         last_meaningful_interaction: new Date().toISOString(),
       });
@@ -230,8 +247,9 @@ export async function processRedditLeads(leads: RedditLead[]): Promise<ProcessRe
   const result: ProcessResult = { source: 'reddit-monitor', created: 0, skipped: 0, errors: 0 };
 
   // Reddit leads don't have contact info — we create prospect records
-  // and alert Adreanne so she can manually reach out via Reddit DM
-  const highIntent = leads.filter((l) => l.intentScore >= 5);
+  // and alert Adreanne so she can manually reach out via Reddit DM.
+  // A deleted or missing account cannot be DMed, so it is not a lead.
+  const highIntent = leads.filter((l) => l.intentScore >= 5 && hasUsableAuthor(l.author));
 
   if (highIntent.length === 0) return result;
 
@@ -250,7 +268,8 @@ export async function processRedditLeads(leads: RedditLead[]): Promise<ProcessRe
         firstname: `Reddit: u/${lead.author}`,
         lastname: `(${lead.subreddit})`,
         lead_type: capitalise(lead.intentType) as never,
-        channel_source: 'reddit-monitor',
+        channel_source: SCRAPED_CHANNEL,
+        utm_source: `reddit-r-${lead.subreddit}`,
         lead_route: 'Warm',
         last_meaningful_interaction: new Date().toISOString(),
       });
@@ -274,6 +293,20 @@ export async function processRedditLeads(leads: RedditLead[]): Promise<ProcessRe
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Forum and Reddit "leads" carry a username instead of contact details, so the
+ * username is the only route to the person. Placeholders mean there is no route
+ * at all, and creating a contact for one just pollutes the CRM.
+ */
+export function hasUsableAuthor(author: string | undefined): boolean {
+  if (!author) return false;
+  const name = author.trim();
+  if (name.length < 2) return false;
+
+  const placeholders = ['unknown', 'deleted', '[deleted]', 'guest', 'anonymous', 'n/a', 'removed'];
+  return !placeholders.includes(name.toLowerCase());
+}
 
 function extractNameFromTitle(title: string): string {
   // Try to extract a name from common CL title patterns

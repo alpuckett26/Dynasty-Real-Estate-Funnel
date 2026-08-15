@@ -1,30 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { parseSearchResults, scoreIntent } from '@/lib/lead-gen/sources/city-data';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import {
+  parseSearchResults,
+  scoreIntent,
+  isLocallyRelevant,
+  isRecent,
+} from '@/lib/lead-gen/sources/city-data';
 
-const searchHtml = `
-<html><body>
-  <a href="https://www.city-data.com/forum/baton-rouge/1234567-moving-baton-rouge-neighborhood-advice.html">
-    Moving to Baton Rouge next month — neighborhood advice needed
-  </a>
-  <span>by texasmom2024 — posted 01/15/2025</span>
-
-  <a href="https://www.city-data.com/forum/baton-rouge/9876543-buying-home-baton-rouge-first-time.html">
-    Buying a home in Baton Rouge as first time buyer — any tips?
-  </a>
-  <span>by homebuyer_mike — posted 01/14/2025</span>
-
-  <a href="https://www.city-data.com/forum/baton-rouge/1234567-moving-baton-rouge-neighborhood-advice.html">
-    Duplicate link — should be deduplicated
-  </a>
-
-  <a href="https://www.city-data.com/forum/baton-rouge/1234567-moving-baton-rouge-neighborhood-advice.html#post123">
-    Same thread with fragment — should deduplicate
-  </a>
-
-  <a href="https://www.city-data.com/about.html">About City-Data</a>
-  <a href="/forum/search.php">Search</a>
-</body></html>
-`;
+/**
+ * Parsed against markup captured from the live site rather than hand-written
+ * HTML. The previous fixture invented absolute thread URLs; the site serves
+ * relative ones, so the parser passed every test while returning nothing in
+ * production against a page of 603 results.
+ */
+const liveHtml = readFileSync(
+  join(__dirname, 'fixtures', 'city-data-search.html'),
+  'utf8'
+);
 
 const noResultsHtml = `
 <html><body>
@@ -34,40 +27,115 @@ const noResultsHtml = `
 `;
 
 describe('parseSearchResults', () => {
-  it('extracts city-data forum thread links', () => {
-    const posts = parseSearchResults(searchHtml);
+  it('extracts threads from the markup the site actually serves', () => {
+    const posts = parseSearchResults(liveHtml);
     expect(posts.length).toBeGreaterThan(0);
-    expect(posts.every((p) => p.url.includes('city-data.com/forum'))).toBe(true);
   });
 
-  it('deduplicates URLs including stripping fragments', () => {
-    const posts = parseSearchResults(searchHtml);
-    const urls = posts.map((p) => p.url);
-    const unique = new Set(urls);
-    expect(unique.size).toBe(urls.length);
+  it('resolves relative thread hrefs to absolute URLs', () => {
+    const posts = parseSearchResults(liveHtml);
+    expect(posts.length).toBeGreaterThan(0);
+    for (const post of posts) {
+      expect(post.url).toMatch(/^https:\/\/www\.city-data\.com\/forum\/[a-z0-9-]+\/\d+-.*\.html$/i);
+    }
   });
 
-  it('strips fragment (#anchor) from URLs', () => {
-    const posts = parseSearchResults(searchHtml);
+  it('strips the ?highlight= query and any fragment', () => {
+    const posts = parseSearchResults(liveHtml);
+    expect(posts.some((p) => p.url.includes('?'))).toBe(false);
     expect(posts.some((p) => p.url.includes('#'))).toBe(false);
   });
 
-  it('excludes non-forum links', () => {
-    const posts = parseSearchResults(searchHtml);
-    expect(posts.some((p) => p.url.includes('/about'))).toBe(false);
-    expect(posts.some((p) => p.url.includes('search.php'))).toBe(false);
+  it('deduplicates threads that appear more than once', () => {
+    const posts = parseSearchResults(liveHtml);
+    const urls = posts.map((p) => p.url);
+    expect(new Set(urls).size).toBe(urls.length);
   });
 
-  it('returns empty array when no results', () => {
-    const posts = parseSearchResults(noResultsHtml);
-    expect(posts).toEqual([]);
+  it('ignores the per-page pagination links inside a result row', () => {
+    // Rows carry "1 2 3 ... Last Page" anchors pointing at -2.html, -3.html etc.
+    const posts = parseSearchResults(liveHtml);
+    expect(posts.some((p) => /-\d+\.html$/.test(p.url.replace(/\/\d+-/, '/')))).toBe(false);
   });
 
-  it('sets source-friendly postedAt date', () => {
-    const posts = parseSearchResults(searchHtml);
-    for (const post of posts) {
-      expect(() => new Date(post.postedAt)).not.toThrow();
+  it('captures the thread starter rather than the last-post author', () => {
+    const posts = parseSearchResults(liveHtml);
+    const southern = posts.find((p) => p.title.includes('Southern City Feels Less Southern'));
+    expect(southern).toBeDefined();
+    // Row lists starter SouthernBoy205 and last poster Redlionjr.
+    expect(southern!.author).toBe('SouthernBoy205');
+  });
+
+  it('captures the forum slug each thread lives in', () => {
+    const posts = parseSearchResults(liveHtml);
+    const southern = posts.find((p) => p.title.includes('Southern City Feels Less Southern'));
+    expect(southern!.forum).toBe('city-vs-city');
+  });
+
+  it('extracts the post preview without repeating the title', () => {
+    const posts = parseSearchResults(liveHtml);
+    const southern = posts.find((p) => p.title.includes('Southern City Feels Less Southern'));
+    expect(southern!.body.length).toBeGreaterThan(0);
+    expect(southern!.body.startsWith(southern!.title)).toBe(false);
+    expect(southern!.body).toContain('Huntsville');
+  });
+
+  it('parses the last-post date instead of defaulting to today', () => {
+    const posts = parseSearchResults(liveHtml);
+    const southern = posts.find((p) => p.title.includes('Southern City Feels Less Southern'));
+    expect(southern!.postedAt.startsWith('2026-03-14')).toBe(true);
+  });
+
+  it('returns an empty array when there are no results', () => {
+    expect(parseSearchResults(noResultsHtml)).toEqual([]);
+  });
+
+  it('produces valid dates for every post', () => {
+    for (const post of parseSearchResults(liveHtml)) {
+      expect(Number.isNaN(new Date(post.postedAt).getTime())).toBe(false);
     }
+  });
+});
+
+describe('isLocallyRelevant', () => {
+  it('accepts threads in a Louisiana forum', () => {
+    expect(isLocallyRelevant({ forum: 'baton-rouge', title: 'Schools?', body: '' })).toBe(true);
+    expect(isLocallyRelevant({ forum: 'louisiana', title: 'Schools?', body: '' })).toBe(true);
+  });
+
+  it('accepts off-forum threads that name the market', () => {
+    expect(
+      isLocallyRelevant({ forum: 'general-u-s', title: 'Moving to Baton Rouge', body: '' })
+    ).toBe(true);
+  });
+
+  it('rejects the national noise the broken forum filter lets through', () => {
+    // Every one of these came back from a search scoped to forum 153, Baton Rouge.
+    const posts = parseSearchResults(liveHtml);
+    const offTopic = posts.filter((p) => !isLocallyRelevant(p));
+    expect(offTopic.length).toBeGreaterThan(0);
+    expect(offTopic.some((p) => p.forum === 'college-football' || p.forum === 'weather' ||
+      p.forum === 'city-vs-city' || p.forum === 'politics-other-controversies')).toBe(true);
+  });
+});
+
+describe('isRecent', () => {
+  it('accepts a thread posted today', () => {
+    expect(isRecent(new Date().toISOString())).toBe(true);
+  });
+
+  it('rejects the years-old threads the search ranks highly', () => {
+    expect(isRecent('2022-09-28T00:00:00.000Z')).toBe(false);
+  });
+
+  it('rejects an unparseable date rather than treating it as fresh', () => {
+    expect(isRecent('not a date')).toBe(false);
+  });
+
+  it('honours a custom age window', () => {
+    const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000).toISOString();
+    expect(isRecent(tenDaysAgo, 30)).toBe(true);
+    expect(isRecent(tenDaysAgo, 5)).toBe(false);
   });
 });
 
@@ -97,8 +165,7 @@ describe('scoreIntent', () => {
 
   it('caps score at 10', () => {
     const heavy = Array(10).fill('looking to buy buying a home first time homebuyer down payment mortgage').join(' ');
-    const result = scoreIntent(heavy);
-    expect(result.score).toBeLessThanOrEqual(10);
+    expect(scoreIntent(heavy).score).toBeLessThanOrEqual(10);
   });
 
   it('scores school district and neighborhood signals', () => {

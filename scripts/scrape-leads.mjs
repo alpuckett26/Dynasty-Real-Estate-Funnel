@@ -2,11 +2,23 @@
  * Dynasty / ATR Local Lead Gen Scraper
  *
  * Run manually: node scripts/scrape-leads.mjs
- * Schedule:     Windows Task Scheduler or cron
  *
- * Scrapes Craigslist, FSBO.com, BiggerPockets, City-Data, Reddit
- * from your local IP (bypasses cloud IP blocks), then POSTs
- * results to the Vercel API which loads them into HubSpot.
+ * ⚠️ ALL THREE SOURCES ARE CURRENTLY BLOCKED. Verified by live probe from a
+ * residential IP on 2026-08-15:
+ *
+ *   Craigslist  HTTP 403 — the "run it from home to dodge the cloud IP block"
+ *               premise of this script no longer holds; home IPs are blocked too
+ *   Reddit      HTTP 403 — anonymous .json access is closed, OAuth required
+ *   City-Data   HTTP 200, but its forum filter is ignored server-side, so a
+ *               Baton Rouge search returns national threads years old with no
+ *               contact details
+ *
+ * Running this today produces nothing. It is kept because the parsing logic is
+ * still correct and each source prints its HTTP status, so it doubles as a
+ * quick way to retest whether a source has reopened.
+ *
+ * For seller leads that actually arrive, use the REDX import instead:
+ * POST a REDX CSV export to /api/lead-gen/import (see src/lib/lead-gen/sources/redx.ts).
  */
 
 import { readFileSync } from 'fs';
@@ -96,6 +108,13 @@ async function createNote(contactId, body) {
 // ── Twilio SMS ────────────────────────────────────────────────────────────────
 
 async function sendSMS(to, body) {
+  // Mirrors src/lib/notifications/outbound-guard.ts — this script reads
+  // .env.local directly, so it needs the same protection against a test run
+  // texting a real person.
+  if (process.env.OUTBOUND_DISABLED === 'true' || process.env.OUTBOUND_DISABLED === '1') {
+    console.log(`  [OutboundDisabled] Suppressed SMS to ${to}: ${body.slice(0, 80)}`);
+    return;
+  }
   if (!TWILIO_SID || !TWILIO_TOKEN || !TWILIO_FROM) return;
   const digits = to.replace(/\D/g, '');
   const e164 = digits.length === 10 ? `+1${digits}` : `+${digits}`;
@@ -119,7 +138,11 @@ async function processLead({ firstName, lastName, email, phone, source, title, p
     email: email || undefined,
     phone: phone || undefined,
     lead_type: intentType === 'seller' ? 'Seller' : 'Buyer',
-    channel_source: 'form',
+    // channel_source is a HubSpot enum; the scraper name is not one of its
+    // values. It was set to 'form' here, which counted scraped prospects as
+    // website form submissions and corrupted source attribution in the digest.
+    channel_source: 'unknown',
+    utm_source: source ?? 'scraper',
     lead_route: 'Warm',
     last_meaningful_interaction: new Date().toISOString(),
   });

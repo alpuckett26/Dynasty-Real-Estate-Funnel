@@ -2,7 +2,11 @@
  * Reddit Intent Monitor
  *
  * Watches public subreddits for posts/comments that signal buying or selling intent.
- * Uses Reddit's public JSON API — no credentials required.
+ *
+ * DISABLED as of 2026-08-15 — Reddit returns HTTP 403 to the anonymous .json
+ * endpoints this relies on, from both cloud and residential IPs. Access now
+ * requires a registered OAuth app. The scan still runs its health probe when
+ * re-enabled, so the cron will report the day it starts working again.
  *
  * Intent signals found:
  * - "looking to buy a house in [city]"
@@ -11,6 +15,14 @@
  * - "first time homebuyer"
  * - "need a real estate agent"
  */
+
+import {
+  classifyStatus,
+  disabledScan,
+  isSourceEnabled,
+  summariseHealth,
+  type SourceScan,
+} from '../source-health';
 
 export interface RedditLead {
   subreddit: string;
@@ -47,19 +59,29 @@ const SELLER_KEYWORDS = [
   'home valuation', 'need to sell fast', 'cash offer',
 ];
 
-export async function scanRedditForLeads(): Promise<RedditLead[]> {
+export async function scanRedditForLeads(): Promise<SourceScan<RedditLead>> {
+  const source = 'reddit-monitor';
+  if (!isSourceEnabled(source)) return disabledScan<RedditLead>(source);
+
   const leads: RedditLead[] = [];
+  let requests = 0;
+  const failures = { blocked: 0, error: 0 };
 
   for (const subreddit of SUBREDDITS) {
     try {
       // Search new posts in the last 24 hours
       const url = `https://www.reddit.com/r/${subreddit}/new.json?limit=50`;
+      requests++;
       const res = await fetch(url, {
         headers: { 'User-Agent': 'DynastyRealEstate/1.0 (lead gen monitor)' },
         signal: AbortSignal.timeout(10_000),
       });
 
-      if (!res.ok) continue;
+      if (!res.ok) {
+        failures[classifyStatus(res.status)]++;
+        console.error(`[Reddit Monitor] r/${subreddit} returned HTTP ${res.status}`);
+        continue;
+      }
       const data = await res.json() as RedditAPIResponse;
 
       for (const post of data.data.children) {
@@ -87,12 +109,16 @@ export async function scanRedditForLeads(): Promise<RedditLead[]> {
         }
       }
     } catch (err) {
+      failures.error++;
       console.error(`[Reddit Monitor] Failed for r/${subreddit}:`, err);
     }
   }
 
   // Sort by intent score descending
-  return leads.sort((a, b) => b.intentScore - a.intentScore);
+  leads.sort((a, b) => b.intentScore - a.intentScore);
+
+  const { health, detail } = summariseHealth(requests, failures);
+  return { source, health, detail, leads, requests, failures: failures.blocked + failures.error };
 }
 
 function scoreIntent(text: string): { intentType: RedditLead['intentType']; score: number } {

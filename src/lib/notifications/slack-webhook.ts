@@ -5,7 +5,15 @@
  * a circular import (slack.ts already imports the SMS layer).
  */
 
+import { logSuppressed, outboundDisabled } from '@/lib/notifications/outbound-guard';
+
 export async function postSlackText(text: string): Promise<boolean> {
+  if (outboundDisabled()) {
+    logSuppressed('Slack', 'webhook', text);
+    // Reported as delivered so callers don't escalate to another channel.
+    return true;
+  }
+
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) return false;
 

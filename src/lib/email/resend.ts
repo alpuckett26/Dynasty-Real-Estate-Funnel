@@ -4,6 +4,7 @@
  */
 
 import { Resend } from 'resend';
+import { logSuppressed, outboundDisabled } from '@/lib/notifications/outbound-guard';
 
 let _client: Resend | null = null;
 
@@ -22,6 +23,12 @@ export async function sendEmail(params: {
   text: string;
   replyTo?: string;
 }): Promise<void> {
+  // Checked before credentials so a local run never emails a real lead.
+  if (outboundDisabled()) {
+    logSuppressed('email', params.to, `${params.subject} — ${params.text}`);
+    return;
+  }
+
   const from = process.env.FROM_EMAIL ?? 'Adreanne The Realtor <info@adreannetherealtor.com>';
   const client = getClient();
   const { error } = await client.emails.send({

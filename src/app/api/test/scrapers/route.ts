@@ -1,122 +1,133 @@
 /**
- * Test endpoint — runs all lead gen scrapers with relaxed filters
- * and returns raw results. No HubSpot contacts created.
- * Remove or protect this endpoint before going fully public.
+ * Diagnostic endpoint — probes each lead-gen source and reports whether the
+ * site is reachable. No HubSpot contacts are created.
+ *
+ * This is the tool for answering "has Reddit/Craigslist/City-Data reopened?",
+ * so it reports the raw HTTP status rather than a verdict. It previously
+ * returned `status: 'ok'` whenever a request did not throw — which meant a
+ * source returning 403, or returning a page the parser could not read, both
+ * reported healthy with zero results. That is the failure mode this endpoint
+ * exists to catch, so `ok` now requires a 2xx *and* parsed rows.
+ *
+ * Protected with the cron secret: it makes the deployment issue outbound
+ * requests, so it should not be anonymously triggerable.
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { isAuthorizedCron } from '@/lib/utils/cron-auth';
+import { parseSearchResults } from '@/lib/lead-gen/sources/city-data';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-export async function GET() {
-  const results: Record<string, unknown> = {};
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-  // ── Reddit ────────────────────────────────────────────────────────────────
+interface ProbeResult {
+  status: 'ok' | 'blocked' | 'error' | 'unparseable';
+  httpStatus?: number;
+  found?: number;
+  note?: string;
+  sample?: unknown[];
+  error?: string;
+}
+
+/**
+ * Probe one source. `parse` returns the rows found; an empty result on a 2xx
+ * means the site answered but the parser could not read it — reported as
+ * `unparseable` rather than a healthy zero, because they need different fixes.
+ */
+async function probe(
+  url: string,
+  headers: Record<string, string>,
+  parse: (body: string) => unknown[],
+  note?: string
+): Promise<ProbeResult> {
   try {
-    const subreddits = ['batonrouge', 'Louisiana', 'FirstTimeHomeBuyer'];
-    const redditPosts: unknown[] = [];
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
 
-    for (const sub of subreddits) {
-      const res = await fetch(`https://www.reddit.com/r/${sub}/new.json?limit=25`, {
-        headers: { 'User-Agent': 'DynastyRealEstate/1.0' },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!res.ok) continue;
-      const data = await res.json() as { data: { children: Array<{ data: { title: string; author: string; created_utc: number; permalink: string } }> } };
-      const posts = data.data.children.slice(0, 5).map(p => ({
-        subreddit: sub,
+    if (!res.ok) {
+      const blocked = res.status === 403 || res.status === 429 || res.status === 401;
+      return {
+        status: blocked ? 'blocked' : 'error',
+        httpStatus: res.status,
+        note: blocked ? 'Site is refusing automated requests' : note,
+      };
+    }
+
+    const rows = parse(await res.text());
+    if (rows.length === 0) {
+      return {
+        status: 'unparseable',
+        httpStatus: res.status,
+        found: 0,
+        note: note ?? 'Reachable but nothing parsed — the page layout likely changed',
+      };
+    }
+
+    return { status: 'ok', httpStatus: res.status, found: rows.length, note, sample: rows.slice(0, 5) };
+  } catch (err) {
+    return { status: 'error', error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAuthorizedCron(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const results: Record<string, ProbeResult> = {};
+
+  results.reddit = await probe(
+    'https://www.reddit.com/r/batonrouge/new.json?limit=25',
+    { 'User-Agent': 'DynastyRealEstate/1.0' },
+    (body) => {
+      const data = JSON.parse(body) as {
+        data: { children: Array<{ data: { title: string; author: string; permalink: string } }> };
+      };
+      return data.data.children.map((p) => ({
         title: p.data.title,
         author: p.data.author,
-        age: Math.round((Date.now() / 1000 - p.data.created_utc) / 3600) + 'h ago',
         url: `https://reddit.com${p.data.permalink}`,
       }));
-      redditPosts.push(...posts);
-    }
-    results.reddit = { status: 'ok', count: redditPosts.length, sample: redditPosts.slice(0, 5) };
-  } catch (err) {
-    results.reddit = { status: 'error', error: String(err) };
-  }
+    },
+    'Anonymous JSON access was closed in 2026; expect 403 until an OAuth app is registered'
+  );
 
-  // ── Craigslist ────────────────────────────────────────────────────────────
-  try {
-    const res = await fetch('https://batonrouge.craigslist.org/search/reo?format=rss', {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const xml = await res.text();
-    const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 5);
-    const parsed = items.map(m => {
-      const title = m[1].match(/<title[^>]*>(?:<!\[CDATA\[)?([^\]<]+)/)?.[1]?.trim() ?? '';
-      const link = m[1].match(/<link>([^<]+)/)?.[1]?.trim() ?? '';
-      return { title, link };
-    });
-    results.craigslist = { status: 'ok', count: items.length, sample: parsed };
-  } catch (err) {
-    results.craigslist = { status: 'error', error: String(err) };
-  }
+  results.craigslist = await probe(
+    'https://batonrouge.craigslist.org/search/reo?format=rss',
+    { 'User-Agent': BROWSER_UA },
+    (xml) =>
+      [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 5).map((m) => ({
+        title: m[1].match(/<title[^>]*>(?:<!\[CDATA\[)?([^\]<]+)/)?.[1]?.trim() ?? '',
+        link: m[1].match(/<link>([^<]+)/)?.[1]?.trim() ?? '',
+      })),
+    'Blocked from cloud and residential IPs alike'
+  );
 
-  // ── FSBO.com ──────────────────────────────────────────────────────────────
-  try {
-    const res = await fetch('https://www.fsbo.com/search/?location=Baton+Rouge%2C+LA&radius=50', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html',
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
-    const links = [...html.matchAll(/href="(\/listing\/[^"]+)"/g)]
-      .map(m => `https://www.fsbo.com${m[1]}`)
-      .filter((v, i, a) => a.indexOf(v) === i)
-      .slice(0, 5);
-    results.fsbo_com = { status: 'ok', listingsFound: links.length, sample: links };
-  } catch (err) {
-    results.fsbo_com = { status: 'error', error: String(err) };
-  }
+  results.city_data = await probe(
+    'https://www.city-data.com/forum/search.php?query=baton+rouge&forumid=153&do=process',
+    { 'User-Agent': BROWSER_UA, Accept: 'text/html', Referer: 'https://www.city-data.com/' },
+    (html) =>
+      parseSearchResults(html).slice(0, 5).map((p) => ({
+        title: p.title,
+        forum: p.forum,
+        author: p.author,
+        postedAt: p.postedAt,
+        url: p.url,
+      })),
+    'Reachable, but the forum filter is ignored server-side — results are national ' +
+      'and often years old, so a healthy probe here still does not mean usable leads'
+  );
 
-  // ── BiggerPockets ─────────────────────────────────────────────────────────
-  try {
-    const res = await fetch('https://www.biggerpockets.com/forums/search?q=baton+rouge&sort=recent', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html',
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
-    const threads = [...html.matchAll(/<a[^>]+href="(\/forums\/[^"]*(?:thread|topic)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)]
-      .map(m => ({ url: `https://www.biggerpockets.com${m[1]}`, title: m[2].replace(/<[^>]+>/g, '').trim() }))
-      .filter(t => t.title.length > 10)
-      .slice(0, 5);
-    results.biggerpockets = { status: 'ok', threadsFound: threads.length, sample: threads };
-  } catch (err) {
-    results.biggerpockets = { status: 'error', error: String(err) };
-  }
+  const usable = Object.values(results).filter((r) => r.status === 'ok').length;
 
-  // ── City-Data ─────────────────────────────────────────────────────────────
-  try {
-    const res = await fetch('https://www.city-data.com/forum/search.php?query=baton+rouge&forumid=153&do=process', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html',
-        'Referer': 'https://www.city-data.com/',
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
-    const threads = [...html.matchAll(/<a[^>]+href="(https?:\/\/www\.city-data\.com\/forum\/[^"]+\.html[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)]
-      .map(m => ({ url: m[1].split('#')[0], title: m[2].replace(/<[^>]+>/g, '').trim() }))
-      .filter(t => t.title.length > 10)
-      .slice(0, 5);
-    results.city_data = { status: 'ok', threadsFound: threads.length, sample: threads };
-  } catch (err) {
-    results.city_data = { status: 'error', error: String(err) };
-  }
-
-  return NextResponse.json(results, { status: 200 });
+  return NextResponse.json(
+    {
+      checkedAt: new Date().toISOString(),
+      summary: `${usable}/${Object.keys(results).length} sources reachable and parseable`,
+      results,
+    },
+    { status: 200 }
+  );
 }

@@ -7,9 +7,22 @@
  * Targets: sellers who are trying to sell without an agent — prime candidates
  * for Dynasty's listing services.
  *
+ * DISABLED as of 2026-08-15 — the RSS feed returns HTTP 403 from residential
+ * IPs as well as cloud ones, so the "run it locally instead" workaround that
+ * used to be documented no longer works either. REDX (src/lib/lead-gen/sources/redx.ts)
+ * now covers FSBO seller data, with contact details and consent handling.
+ *
  * RSS format: https://{city}.craigslist.org/search/reo?format=rss
  * reo = real estate by owner, rea = all real estate
  */
+
+import {
+  classifyStatus,
+  disabledScan,
+  isSourceEnabled,
+  summariseHealth,
+  type SourceScan,
+} from '../source-health';
 
 export interface CraigslistLead {
   title: string;
@@ -29,18 +42,28 @@ const MARKETS = [
   { city: 'neworleans', label: 'New Orleans' },
 ];
 
-export async function scrapeCraigslistFSBO(): Promise<CraigslistLead[]> {
+export async function scrapeCraigslistFSBO(): Promise<SourceScan<CraigslistLead>> {
+  const source = 'craigslist-fsbo';
+  if (!isSourceEnabled(source)) return disabledScan<CraigslistLead>(source);
+
   const leads: CraigslistLead[] = [];
+  let requests = 0;
+  const failures = { blocked: 0, error: 0 };
 
   for (const market of MARKETS) {
     try {
       const url = `https://${market.city}.craigslist.org/search/reo?format=rss`;
+      requests++;
       const res = await fetch(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DynastyRE/1.0)' },
         signal: AbortSignal.timeout(15_000),
       });
 
-      if (!res.ok) continue;
+      if (!res.ok) {
+        failures[classifyStatus(res.status)]++;
+        console.error(`[CL Scraper] ${market.city} returned HTTP ${res.status}`);
+        continue;
+      }
       const xml = await res.text();
       const items = parseRSSItems(xml);
 
@@ -49,11 +72,13 @@ export async function scrapeCraigslistFSBO(): Promise<CraigslistLead[]> {
         if (lead) leads.push(lead);
       }
     } catch (err) {
+      failures.error++;
       console.error(`[CL Scraper] Failed for ${market.city}:`, err);
     }
   }
 
-  return leads;
+  const { health, detail } = summariseHealth(requests, failures);
+  return { source, health, detail, leads, requests, failures: failures.blocked + failures.error };
 }
 
 interface RSSItem {

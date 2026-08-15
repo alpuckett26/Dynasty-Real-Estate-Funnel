@@ -1,13 +1,17 @@
 /**
  * Tests for the Craigslist RSS parser.
  * No network calls — we feed it fake XML.
+ *
+ * The source is disabled by default (HTTP 403 from every IP as of 2026-08-15),
+ * so these enable it explicitly to exercise the parser.
+ *
+ * Two tests here used to assert "returns empty array when feed returns non-ok
+ * status". That was the silent-failure bug written down as a requirement: an
+ * empty array is what a 403 and a quiet day both looked like. They now assert
+ * the source reports *why* it came back empty.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-
-// We need to access the private parseRSSItems / extractLeadFromItem functions.
-// We do this by importing the module and exercising the public function
-// with a mocked fetch response.
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import * as CL from '@/lib/lead-gen/sources/craigslist';
 
@@ -36,81 +40,92 @@ const sampleRSS = `<?xml version="1.0"?>
   </channel>
 </rss>`;
 
+const okFetch = () =>
+  vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => sampleRSS } as Response);
+
+beforeEach(() => {
+  process.env.LEADGEN_ENABLE_CRAIGSLIST_FSBO = 'true';
+});
+
+afterEach(() => {
+  delete process.env.LEADGEN_ENABLE_CRAIGSLIST_FSBO;
+  vi.restoreAllMocks();
+});
+
 describe('scrapeCraigslistFSBO (with mocked fetch)', () => {
   it('returns leads that have phone or email, skips items without contact info', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: async () => sampleRSS,
-    } as Response);
+    global.fetch = okFetch();
 
-    const leads = await CL.scrapeCraigslistFSBO();
+    const scan = await CL.scrapeCraigslistFSBO();
 
-    // Item 1: has phone + email — should be included (once per market, but 2 markets so 2 or 4)
-    // Item 2: no contact info — should be excluded
-    // Item 3: email only — should be included
-    // 2 markets × 2 valid items = 4 leads
-    expect(leads.length).toBe(4);
-    expect(leads.every((l) => l.phone || l.email)).toBe(true);
+    // Item 1: has phone + email — included. Item 2: no contact info — excluded.
+    // Item 3: email only — included. 2 markets × 2 valid items = 4 leads.
+    expect(scan.leads.length).toBe(4);
+    expect(scan.leads.every((l) => l.phone || l.email)).toBe(true);
+    expect(scan.health).toBe('ok');
   });
 
   it('extracts phone number correctly', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: async () => sampleRSS,
-    } as Response);
+    global.fetch = okFetch();
 
-    const leads = await CL.scrapeCraigslistFSBO();
-    const withPhone = leads.find((l) => l.phone);
-    expect(withPhone?.phone).toBe('2258675309');
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.leads.find((l) => l.phone)?.phone).toBe('2258675309');
   });
 
   it('extracts email correctly', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: async () => sampleRSS,
-    } as Response);
+    global.fetch = okFetch();
 
-    const leads = await CL.scrapeCraigslistFSBO();
-    const withEmail = leads.find((l) => l.email === 'john@example.com');
-    expect(withEmail).toBeTruthy();
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.leads.find((l) => l.email === 'john@example.com')).toBeTruthy();
   });
 
   it('extracts price correctly', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: async () => sampleRSS,
-    } as Response);
+    global.fetch = okFetch();
 
-    const leads = await CL.scrapeCraigslistFSBO();
-    const withPrice = leads.find((l) => l.price);
-    expect(withPrice?.price).toMatch(/\$245,000/);
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.leads.find((l) => l.price)?.price).toMatch(/\$245,000/);
   });
 
   it('sets source to craigslist-fsbo', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: async () => sampleRSS,
-    } as Response);
+    global.fetch = okFetch();
 
-    const leads = await CL.scrapeCraigslistFSBO();
-    expect(leads.every((l) => l.source === 'craigslist-fsbo')).toBe(true);
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.leads.every((l) => l.source === 'craigslist-fsbo')).toBe(true);
   });
 
-  it('returns empty array when fetch fails', async () => {
+  it('reports an error, not just emptiness, when the fetch throws', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
-    const leads = await CL.scrapeCraigslistFSBO();
-    expect(leads).toEqual([]);
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.leads).toEqual([]);
+    expect(scan.health).toBe('error');
+    expect(scan.failures).toBe(2); // one per market
   });
 
-  it('returns empty array when feed returns non-ok status', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      text: async () => '',
-    } as Response);
+  it('reports blocked — not a quiet day — when the feed returns 403', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403, text: async () => '' } as Response);
 
-    const leads = await CL.scrapeCraigslistFSBO();
-    expect(leads).toEqual([]);
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.leads).toEqual([]);
+    expect(scan.health).toBe('blocked');
+    expect(scan.detail).toMatch(/refused/i);
+  });
+
+  it('reports an error for a non-blocking failure status', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404, text: async () => '' } as Response);
+
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.leads).toEqual([]);
+    expect(scan.health).toBe('error');
+  });
+
+  it('does not touch the network at all while disabled', async () => {
+    delete process.env.LEADGEN_ENABLE_CRAIGSLIST_FSBO;
+    const fetchSpy = okFetch();
+    global.fetch = fetchSpy;
+
+    const scan = await CL.scrapeCraigslistFSBO();
+    expect(scan.health).toBe('disabled');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
