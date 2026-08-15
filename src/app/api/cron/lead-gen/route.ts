@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
   // A blocked source produces zero leads and looks exactly like a quiet day.
   // This is the only thing that tells anyone the pipeline has stopped working.
   // Disabled sources are intentional and stay silent.
-  const broken = results.filter((r) => needsAttention({ health: r.health } as SourceScan<unknown>));
+  const broken = results.filter(needsAttention);
   if (broken.length > 0) {
     const lines = broken.map((r) => `• ${r.source} — ${r.health}: ${r.detail}`);
     await alertOwner(

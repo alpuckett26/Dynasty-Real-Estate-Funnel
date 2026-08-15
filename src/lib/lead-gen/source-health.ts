@@ -118,7 +118,10 @@ export function summariseHealth(
   };
 }
 
-/** True when a scan represents a real problem worth waking someone over. */
-export function needsAttention(scan: SourceScan<unknown>): boolean {
+/**
+ * True when a scan represents a real problem worth waking someone over.
+ * Takes just the health so callers can pass a scan or a processed result.
+ */
+export function needsAttention(scan: { health: SourceHealth }): boolean {
   return scan.health === 'blocked' || scan.health === 'error';
 }
