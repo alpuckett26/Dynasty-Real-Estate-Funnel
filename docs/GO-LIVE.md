@@ -19,6 +19,8 @@ from fastest-to-first-lead to slowest.
    - `SLACK_WEBHOOK_URL` — hot-lead + digest alerts (optional but recommended)
    - `CRON_SECRET` + `WEBHOOK_SECRET` — random strings, keep private
    - `NEXT_PUBLIC_CALENDLY_URL` — Adreanne's real booking link
+   - `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` — only if switching the Reddit
+     intent monitor on (see Phase 2)
 3. **Run the HubSpot setup script once**: `npm run setup:hubspot`
    (creates all 24 custom properties + the 12-stage pipeline).
 4. **Verify crons are on** — Vercel → Settings → Cron Jobs should show 4 jobs
@@ -73,27 +75,45 @@ through CallRail → `/api/webhooks` (already handled).
 - Adreanne posts 3–4 reels/week with "comment HOME" CTAs — each becomes a
   permanent lead trap. This compounds: old reels keep producing.
 
-### Scraper cron — ⚠️ ALL SOURCES DEAD, expect 0 leads
-Verified by live probe on **2026-08-15**. All three free sources are off by
-default; the evidence for each is in `src/lib/lead-gen/source-health.ts`.
+### Scraper cron — Reddit works again; the other two are dead
+Probed live on **2026-08-15**; all three sources remain off by default and the
+evidence for each is in `src/lib/lead-gen/source-health.ts`.
 
 | Source | Status | Why |
 |---|---|---|
-| Reddit | HTTP 403 | Anonymous `.json` access closed; needs a registered OAuth app |
+| Reddit | ✅ Works via OAuth | Anonymous `.json` is still 403, so it now authenticates as a registered app and reads `oauth.reddit.com`. Needs the setup below. |
 | Craigslist FSBO | HTTP 403 | Blocked from home IPs too, so "run it locally" no longer works |
 | City-Data | HTTP 200, unusable | Forum filter ignored server-side — a Baton Rouge search returns national threads years old with no contact details |
 
-This was producing **nothing while reporting success**: each source swallowed its
-403 and the cron logged "0 found, 0 new, 0 errors". The cron now alerts Adreanne
-whenever an enabled source is blocked, so this can't recur silently.
+This channel was producing **nothing while reporting success**: each source
+swallowed its 403 and the cron logged "0 found, 0 new, 0 errors". The cron now
+alerts Adreanne whenever an enabled source is blocked, so this can't recur
+silently.
 
-- **Do not budget any leads from this channel.** Purchased lists are the working
-  seller-lead path — see the next section.
-- To retest a source later, set `LEADGEN_ENABLE_REDDIT_MONITOR=true` (or
-  `..._CRAIGSLIST_FSBO`, `..._CITY_DATA`) in Vercel. The next 7am run will
-  report whether it works.
+**Turning Reddit on (~10 min):**
+1. Go to <https://www.reddit.com/prefs/apps> → *create another app...*
+2. Type **script** (or *web app*). An **installed app** will not work — it
+   cannot use the `client_credentials` grant.
+3. Copy the id shown under the app name and the `secret` field into Vercel:
+   `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`. Optionally set
+   `REDDIT_USER_AGENT` — Reddit throttles generic agents harder.
+4. Set `LEADGEN_ENABLE_REDDIT_MONITOR=true`.
+5. Confirm with the probe endpoint before waiting on the 7am cron:
+   `curl https://<domain>/api/test/scrapers -H "x-cron-secret: <CRON_SECRET>"`
+   → `reddit.status` should read `"ok"` with a `sample` of real posts.
+
+Enabling the source **without** credentials reports `error` on the cron and
+texts Adreanne — it does not quietly find nothing.
+
+- Expect modest, unpredictable volume from Reddit: these are intent signals in
+  public threads, not contact details. **Purchased lists remain the reliable
+  seller-lead path** — see the next section.
+- Craigslist and City-Data stay off. To retest one later, set
+  `LEADGEN_ENABLE_CRAIGSLIST_FSBO=true` (or `..._CITY_DATA`) in Vercel; the next
+  7am run will report whether it works.
 - There is no `npm run leadgen:local` script; the manual equivalent is
-  `node scripts/scrape-leads.mjs`, which hits the same blocked sources.
+  `node scripts/scrape-leads.mjs`, which reads the same Reddit credentials from
+  `.env.local`.
 
 ### Purchased seller lists (REDX) → the working replacement for the scrapers
 - Export a REDX CSV (FSBO, Expired, FRBO or Pre-Foreclosure) and POST it to
@@ -125,7 +145,7 @@ whenever an enabled source is blocked, so this can't recur silently.
 |---|---|---|
 | Real-time | Hot lead (score ≥70) from any source | SMS to Adreanne + Slack, within seconds |
 | Real-time | Meta lead ad submission | HubSpot contact + instant sequence step 0 |
-| 7:00 AM | Scraper health check | SMS **only** if an enabled source is blocked (all are off today, so silent) |
+| 7:00 AM | Reddit intent scan + scraper health check | New leads to HubSpot if Reddit is on; SMS **only** if an enabled source is blocked or misconfigured |
 | 9:00 AM | Sequence steps due today | Emails/SMS go out to leads |
 | 10:00 AM | Reactivation batch | Dormant leads get re-engagement touch |
 | 6:00 PM | **Daily Lead Digest** | Email + SMS + Slack: every lead from the last 24h, by source and temperature, hot ones listed with phone numbers |
@@ -147,5 +167,7 @@ immediately instead of discovered a week later.
       → confirm digest email/SMS arrives
 - [ ] Sanity-check the scrapers are honestly reported, not silently dead:
       `curl https://<domain>/api/cron/lead-gen -H "x-cron-secret: <CRON_SECRET>"`
-      → every source should read `"health": "disabled"` and `"healthy": true`.
-      Any `"blocked"` or `"error"` means a source you enabled is not working.
+      → every source you have not enabled should read `"health": "disabled"`,
+      with `"healthy": true` overall. Any `"blocked"` or `"error"` means a
+      source you enabled is not working — including Reddit with missing or
+      rejected app credentials.

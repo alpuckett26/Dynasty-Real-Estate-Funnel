@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthorizedCron } from '@/lib/utils/cron-auth';
 import { parseSearchResults } from '@/lib/lead-gen/sources/city-data';
+import { RedditAuthError, redditApiFetch, redditCredentials } from '@/lib/lead-gen/sources/reddit-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -71,6 +72,63 @@ async function probe(
   }
 }
 
+/**
+ * Reddit needs its own probe: it is the one source that authenticates, so
+ * "can we reach it" and "are the app credentials good" are separate questions
+ * and the answer has to say which one failed.
+ */
+async function probeReddit(): Promise<ProbeResult> {
+  if (!redditCredentials()) {
+    return {
+      status: 'error',
+      note: 'No Reddit app configured — set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET ' +
+        '(register at https://www.reddit.com/prefs/apps). Anonymous access has been 403 since 2026.',
+    };
+  }
+
+  try {
+    const res = await redditApiFetch('/r/batonrouge/new?limit=25&raw_json=1', 15_000);
+
+    if (!res.ok) {
+      const blocked = res.status === 403 || res.status === 429;
+      return {
+        status: blocked ? 'blocked' : 'error',
+        httpStatus: res.status,
+        note: res.status === 429
+          ? 'Rate limited — the app token is valid but out of quota'
+          : blocked
+            ? 'Authenticated, and still refused — the app may lack access to this subreddit'
+            : undefined,
+      };
+    }
+
+    const data = await res.json() as {
+      data: { children: Array<{ data: { title: string; author: string; permalink: string } }> };
+    };
+    const rows = data.data.children.map((p) => ({
+      title: p.data.title,
+      author: p.data.author,
+      url: `https://reddit.com${p.data.permalink}`,
+    }));
+
+    if (rows.length === 0) {
+      return {
+        status: 'unparseable',
+        httpStatus: res.status,
+        found: 0,
+        note: 'Authenticated and got a 200, but no posts came back',
+      };
+    }
+
+    return { status: 'ok', httpStatus: res.status, found: rows.length, sample: rows.slice(0, 5) };
+  } catch (err) {
+    if (err instanceof RedditAuthError) {
+      return { status: 'error', httpStatus: err.status, note: `OAuth ${err.kind}`, error: err.message };
+    }
+    return { status: 'error', error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export async function GET(req: NextRequest) {
   if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -78,21 +136,7 @@ export async function GET(req: NextRequest) {
 
   const results: Record<string, ProbeResult> = {};
 
-  results.reddit = await probe(
-    'https://www.reddit.com/r/batonrouge/new.json?limit=25',
-    { 'User-Agent': 'DynastyRealEstate/1.0' },
-    (body) => {
-      const data = JSON.parse(body) as {
-        data: { children: Array<{ data: { title: string; author: string; permalink: string } }> };
-      };
-      return data.data.children.map((p) => ({
-        title: p.data.title,
-        author: p.data.author,
-        url: `https://reddit.com${p.data.permalink}`,
-      }));
-    },
-    'Anonymous JSON access was closed in 2026; expect 403 until an OAuth app is registered'
-  );
+  results.reddit = await probeReddit();
 
   results.craigslist = await probe(
     'https://batonrouge.craigslist.org/search/reo?format=rss',

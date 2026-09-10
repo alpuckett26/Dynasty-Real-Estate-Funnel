@@ -36,9 +36,12 @@ export interface SourceScan<T> {
  *
  * Verified by live probe on 2026-08-15:
  *
- * - reddit-monitor  HTTP 403 on every subreddit, from both cloud and home IPs.
- *   Reddit now requires OAuth for API access; the anonymous .json endpoints
- *   this used are closed. Re-enabling needs a registered Reddit app.
+ * - reddit-monitor  HTTP 403 on every subreddit, from both cloud and home IPs,
+ *   because the anonymous .json endpoints it used are closed. The source has
+ *   since been rebuilt on Reddit's application-only OAuth and reads
+ *   oauth.reddit.com, so it works again once an app is registered. It stays
+ *   off by default because it needs REDDIT_CLIENT_ID/REDDIT_CLIENT_SECRET to
+ *   be set first; enabling it without them reports 'error', not a silent zero.
  *
  * - craigslist-fsbo HTTP 403 on the RSS feed from a residential IP too, so the
  *   documented "run it from a home machine" workaround no longer helps.

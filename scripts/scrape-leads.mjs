@@ -3,19 +3,21 @@
  *
  * Run manually: node scripts/scrape-leads.mjs
  *
- * ⚠️ ALL THREE SOURCES ARE CURRENTLY BLOCKED. Verified by live probe from a
- * residential IP on 2026-08-15:
+ * ⚠️ CRAIGSLIST AND CITY-DATA ARE BLOCKED/UNUSABLE. Verified by live probe from
+ * a residential IP on 2026-08-15:
  *
  *   Craigslist  HTTP 403 — the "run it from home to dodge the cloud IP block"
  *               premise of this script no longer holds; home IPs are blocked too
- *   Reddit      HTTP 403 — anonymous .json access is closed, OAuth required
+ *   Reddit      fixed since — now reads oauth.reddit.com with an app token;
+ *               needs REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env.local
  *   City-Data   HTTP 200, but its forum filter is ignored server-side, so a
  *               Baton Rouge search returns national threads years old with no
  *               contact details
  *
- * Running this today produces nothing. It is kept because the parsing logic is
- * still correct and each source prints its HTTP status, so it doubles as a
- * quick way to retest whether a source has reopened.
+ * With Reddit credentials set, only Reddit produces anything today. The other
+ * two are kept because their parsing logic is still correct and each source
+ * prints its HTTP status, so this doubles as a way to retest whether one has
+ * reopened.
  *
  * For seller leads that actually arrive, use the REDX import instead:
  * POST a REDX CSV export to /api/lead-gen/import (see src/lib/lead-gen/sources/redx.ts).
@@ -169,16 +171,50 @@ async function processLead({ firstName, lastName, email, phone, source, title, p
 const BUYER_KW = ['looking to buy', 'want to buy', 'buying a house', 'buying a home', 'first time homebuyer', 'moving to baton rouge', 'relocating to', 'need a realtor', 'need an agent', 'pre-approval', 'fha loan'];
 const SELLER_KW = ['selling my home', 'selling my house', 'want to sell', 'fsbo', 'for sale by owner', 'how much is my home worth', 'need to sell'];
 
+/**
+ * Application-only OAuth token. Anonymous .json access has been 403 since 2026,
+ * so this needs REDDIT_CLIENT_ID/REDDIT_CLIENT_SECRET in .env.local — register
+ * an app at https://www.reddit.com/prefs/apps (type "script" or "web app").
+ */
+const REDDIT_UA = process.env.REDDIT_USER_AGENT || 'web:com.adreannetherealtor.leadgen:v1.0 (local script)';
+
+async function redditToken() {
+  const id = process.env.REDDIT_CLIENT_ID?.trim();
+  const secret = process.env.REDDIT_CLIENT_SECRET?.trim();
+  if (!id || !secret) return null;
+
+  const res = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': REDDIT_UA,
+    },
+    body: 'grant_type=client_credentials',
+  });
+  if (!res.ok) {
+    console.warn(`  Reddit token request failed: HTTP ${res.status}`);
+    return null;
+  }
+  return (await res.json()).access_token ?? null;
+}
+
 async function scrapeReddit() {
   const subreddits = ['batonrouge', 'Louisiana', 'FirstTimeHomeBuyer', 'RealEstate', 'moving'];
   const leads = [];
 
+  const token = await redditToken();
+  if (!token) {
+    console.warn('  Reddit skipped: no app credentials (set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET)');
+    return leads;
+  }
+
   for (const sub of subreddits) {
     try {
-      const res = await fetch(`https://www.reddit.com/r/${sub}/new.json?limit=50`, {
-        headers: { 'User-Agent': 'ATR-LeadGen/1.0 (local script)' },
+      const res = await fetch(`https://oauth.reddit.com/r/${sub}/new?limit=50&raw_json=1`, {
+        headers: { Authorization: `Bearer ${token}`, 'User-Agent': REDDIT_UA },
       });
-      if (!res.ok) continue;
+      if (!res.ok) { console.warn(`  Reddit r/${sub}: HTTP ${res.status}`); continue; }
       const data = await res.json();
 
       for (const post of data.data.children) {

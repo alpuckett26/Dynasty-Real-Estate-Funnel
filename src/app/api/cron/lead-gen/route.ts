@@ -4,16 +4,17 @@
  * Runs daily at 7am Central. Scans public sources for people expressing
  * buying or selling intent, creates HubSpot contacts, fires outreach.
  *
- * All three scraper sources are currently DISABLED — see
+ * Every scraper source is off unless explicitly enabled — see
  * src/lib/lead-gen/source-health.ts for the per-source evidence. Purchased
- * lists (REDX, via /api/lead-gen/import) are the working seller-lead path.
+ * lists (REDX, via /api/lead-gen/import) remain the reliable seller-lead path.
  *
- * This route still runs daily so that:
- * - a re-enabled source is exercised and reported on, and
- * - if a source is blocked, that is ALERTED rather than logged as success.
+ * This route runs daily so that:
+ * - an enabled source is exercised and reported on, and
+ * - if a source is blocked or misconfigured, that is ALERTED rather than
+ *   logged as success.
  *
  * Sources:
- * - Reddit intent signals    disabled — HTTP 403, needs OAuth
+ * - Reddit intent signals    works via app OAuth; needs REDDIT_CLIENT_ID/SECRET
  * - City-Data forum threads  disabled — forum filter ignored server-side
  * - Craigslist FSBO          disabled — HTTP 403 from cloud and home IPs
  *

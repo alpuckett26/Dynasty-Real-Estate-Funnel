@@ -1,12 +1,13 @@
 /**
  * Reddit Intent Monitor
  *
- * Watches public subreddits for posts/comments that signal buying or selling intent.
+ * Watches public subreddits for posts that signal buying or selling intent.
  *
- * DISABLED as of 2026-08-15 — Reddit returns HTTP 403 to the anonymous .json
- * endpoints this relies on, from both cloud and residential IPs. Access now
- * requires a registered OAuth app. The scan still runs its health probe when
- * re-enabled, so the cron will report the day it starts working again.
+ * Ran anonymously against `.json` endpoints until 2026-08-15, when Reddit
+ * started answering 403 from every IP. It now authenticates as a registered
+ * app and reads oauth.reddit.com — see ./reddit-auth for the setup. The source
+ * stays off until LEADGEN_ENABLE_REDDIT_MONITOR=true, and reports 'error'
+ * rather than a silent zero if it is switched on without credentials.
  *
  * Intent signals found:
  * - "looking to buy a house in [city]"
@@ -23,6 +24,7 @@ import {
   summariseHealth,
   type SourceScan,
 } from '../source-health';
+import { RedditAuthError, getRedditAccessToken, redditApiFetch } from './reddit-auth';
 
 export interface RedditLead {
   subreddit: string;
@@ -59,9 +61,20 @@ const SELLER_KEYWORDS = [
   'home valuation', 'need to sell fast', 'cash offer',
 ];
 
+/** Posts older than this are stale enough that someone else has them. */
+const MAX_POST_AGE_HOURS = 48;
+
 export async function scanRedditForLeads(): Promise<SourceScan<RedditLead>> {
   const source = 'reddit-monitor';
   if (!isSourceEnabled(source)) return disabledScan<RedditLead>(source);
+
+  // Authenticate once up front. Failing here is a whole-source failure, and
+  // saying so beats six identical per-subreddit errors.
+  try {
+    await getRedditAccessToken();
+  } catch (err) {
+    return authFailureScan(source, err);
+  }
 
   const leads: RedditLead[] = [];
   let requests = 0;
@@ -69,27 +82,29 @@ export async function scanRedditForLeads(): Promise<SourceScan<RedditLead>> {
 
   for (const subreddit of SUBREDDITS) {
     try {
-      // Search new posts in the last 24 hours
-      const url = `https://www.reddit.com/r/${subreddit}/new.json?limit=50`;
       requests++;
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'DynastyRealEstate/1.0 (lead gen monitor)' },
-        signal: AbortSignal.timeout(10_000),
-      });
+      const res = await redditApiFetch(`/r/${subreddit}/new?limit=50&raw_json=1`);
 
       if (!res.ok) {
         failures[classifyStatus(res.status)]++;
         console.error(`[Reddit Monitor] r/${subreddit} returned HTTP ${res.status}`);
+        // 429 is a quota wall, not a per-subreddit fault. Every remaining
+        // request would spend the same exhausted quota and report the same
+        // failure, so stop and let the summary reflect what was attempted.
+        if (res.status === 429) {
+          console.error('[Reddit Monitor] Rate limited — abandoning the rest of this scan');
+          break;
+        }
         continue;
       }
+
       const data = await res.json() as RedditAPIResponse;
 
       for (const post of data.data.children) {
         const p = post.data;
 
-        // Only look at posts from last 48 hours
         const ageHours = (Date.now() / 1000 - p.created_utc) / 3600;
-        if (ageHours > 48) continue;
+        if (ageHours > MAX_POST_AGE_HOURS) continue;
 
         const combined = `${p.title} ${p.selftext ?? ''}`.toLowerCase();
         const { intentType, score } = scoreIntent(combined);
@@ -109,6 +124,8 @@ export async function scanRedditForLeads(): Promise<SourceScan<RedditLead>> {
         }
       }
     } catch (err) {
+      // A token that dies mid-scan surfaces here; still a whole-source failure.
+      if (err instanceof RedditAuthError) return authFailureScan(source, err);
       failures.error++;
       console.error(`[Reddit Monitor] Failed for r/${subreddit}:`, err);
     }
@@ -119,6 +136,23 @@ export async function scanRedditForLeads(): Promise<SourceScan<RedditLead>> {
 
   const { health, detail } = summariseHealth(requests, failures);
   return { source, health, detail, leads, requests, failures: failures.blocked + failures.error };
+}
+
+/**
+ * Turn an auth failure into source health.
+ *
+ * Missing or wrong credentials are 'error', not 'blocked': nothing is refusing
+ * us, the app just isn't configured, and the fix is in Vercel's env vars rather
+ * than in finding a way around a bot wall.
+ */
+function authFailureScan(source: string, err: unknown): SourceScan<RedditLead> {
+  const detail = err instanceof RedditAuthError
+    ? `Reddit OAuth failed (${err.kind}): ${err.message}`
+    : `Reddit OAuth failed: ${err instanceof Error ? err.message : String(err)}`;
+
+  console.error(`[Reddit Monitor] ${detail}`);
+
+  return { source, health: 'error', detail, leads: [], requests: 0, failures: 1 };
 }
 
 function scoreIntent(text: string): { intentType: RedditLead['intentType']; score: number } {
