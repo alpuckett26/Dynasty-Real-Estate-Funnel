@@ -14,16 +14,31 @@
  * Compliance: run lead ads under Meta's Special Ad Category → Housing.
  * The Instant Form must include the SMS-consent checkbox if consentSms
  * is to be honored — we only set consent flags from explicit form fields.
+ *
+ * Failure policy: Meta treats a 200 as delivered and never resends, so a lead
+ * that fails here is gone. Transient Graph errors are therefore retried
+ * in-request, and anything still failing is texted to Adreanne with the
+ * leadgen id and where to download it by hand, rather than being logged to a
+ * console nobody reads. We keep returning 200 either way — a non-200 makes
+ * Meta redeliver the whole batch (re-texting leads that already succeeded) and
+ * eventually disables the subscription outright.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createHmac, timingSafeEqual } from 'crypto';
 import { IntakeLeadSchema, processIntakeLead } from '@/lib/intake/process-lead';
+import {
+  buildLostLeadAlert,
+  classifyMetaFailure,
+  fetchMetaLead,
+  mapMetaLead,
+  toFieldMap,
+  verifyMetaSignature,
+  type LostLead,
+} from '@/lib/intake/meta-webhook';
+import { alertOwner } from '@/lib/sms/twilio';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-const GRAPH_API = 'https://graph.facebook.com/v21.0';
 
 // ── GET: subscription verification handshake ──────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -41,7 +56,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
-  if (!verifyMetaSignature(rawBody, req.headers.get('x-hub-signature-256'))) {
+  const signature = verifyMetaSignature(rawBody, req.headers.get('x-hub-signature-256'));
+  if (!signature.ok) {
+    console.error(`[MetaWebhook] Rejected request: ${signature.reason}`);
+    // Rejecting because the secret is missing is a misconfiguration, not an
+    // attack: every real lead is being turned away. Say so, once per instance,
+    // so a deploy that forgot the env var can't quietly stop the ads working.
+    if (signature.reason.includes('META_APP_SECRET')) await alertMisconfigured(signature.reason);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
@@ -73,154 +94,100 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const results = await Promise.allSettled(
+  const settled = await Promise.allSettled(
     leadgenIds.map(({ leadgenId, adId }) => ingestMetaLead(leadgenId, adId))
   );
 
-  const processed = results.filter((r) => r.status === 'fulfilled').length;
-  const failed = results.length - processed;
-  if (failed > 0) {
-    results.forEach((r) => {
-      if (r.status === 'rejected') console.error('[MetaWebhook] Lead ingest failed:', r.reason);
-    });
+  const lost: LostLead[] = [];
+  settled.forEach((result, i) => {
+    if (result.status !== 'rejected') return;
+    const { leadgenId, adId } = leadgenIds[i];
+    const reason = result.reason as unknown;
+    const failure = classifyMetaFailure(unwrapIngestError(reason));
+
+    console.error(`[MetaWebhook] Lead ${leadgenId} lost (${failure.kind}): ${failure.detail}`, reason);
+    lost.push({ leadgenId, adId, failure, fieldNames: fieldNamesOf(reason) });
+  });
+
+  // A paid lead that silently vanishes is the most expensive failure in this
+  // codebase: the click was bought, the person is waiting, and nothing happens.
+  if (lost.length > 0) {
+    await alertOwner(buildLostLeadAlert(lost)).catch((err) =>
+      console.error('[MetaWebhook] Could not alert about lost leads:', err)
+    );
   }
 
   // Meta requires a fast 200 or it retries/disables the subscription
-  return NextResponse.json({ ok: true, received: leadgenIds.length, processed, failed });
+  return NextResponse.json({
+    ok: true,
+    received: leadgenIds.length,
+    processed: leadgenIds.length - lost.length,
+    failed: lost.length,
+  });
 }
 
-function verifyMetaSignature(body: string, header: string | null): boolean {
-  const secret = process.env.META_APP_SECRET;
-  if (!secret) return true; // dev mode — skip verification
-  if (!header?.startsWith('sha256=')) return false;
-  const expected = createHmac('sha256', secret).update(body).digest('hex');
-  const received = header.slice('sha256='.length);
-  if (expected.length !== received.length) return false;
-  return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(received, 'hex'));
+/**
+ * Meta redelivers a rejected event repeatedly, so this alert has to be
+ * rate-limited or a misconfigured deploy would text Adreanne on every retry.
+ * One per warm instance is enough to be noticed without becoming noise.
+ */
+let misconfigAlertedAt = 0;
+const MISCONFIG_ALERT_INTERVAL_MS = 60 * 60 * 1000;
+
+async function alertMisconfigured(reason: string): Promise<void> {
+  const now = Date.now();
+  if (now - misconfigAlertedAt < MISCONFIG_ALERT_INTERVAL_MS) return;
+  misconfigAlertedAt = now;
+
+  await alertOwner(
+    `⚠️ ATR Meta Lead Ads — leads are being REJECTED\n\n` +
+    `${reason}.\n\n` +
+    `Set META_APP_SECRET in Vercel (Meta app → Settings → Basic → App Secret) ` +
+    `and redeploy. Until then no Facebook or Instagram lead can come through, ` +
+    `and the ads are still spending.`
+  ).catch((err) => console.error('[MetaWebhook] Could not alert about misconfiguration:', err));
 }
 
 // ── Lead retrieval + mapping ──────────────────────────────────────────────────
 
-interface MetaLeadResponse {
-  id: string;
-  created_time?: string;
-  field_data?: Array<{ name: string; values: string[] }>;
-  campaign_name?: string;
-  ad_name?: string;
+/**
+ * Carries the Instant Form's field names alongside the underlying error, so an
+ * alert about an unmappable lead can show what Meta actually sent — that is the
+ * difference between "a lead failed" and "your form calls it `mobile_number`".
+ */
+class IngestError extends Error {
+  constructor(
+    readonly cause: unknown,
+    readonly fieldNames?: string[]
+  ) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'IngestError';
+  }
+}
+
+function unwrapIngestError(err: unknown): unknown {
+  return err instanceof IngestError ? err.cause : err;
+}
+
+function fieldNamesOf(err: unknown): string[] | undefined {
+  return err instanceof IngestError ? err.fieldNames : undefined;
 }
 
 async function ingestMetaLead(leadgenId: string, adId?: string): Promise<void> {
   const token = process.env.META_PAGE_ACCESS_TOKEN;
   if (!token) throw new Error('META_PAGE_ACCESS_TOKEN not configured');
 
-  const res = await fetch(
-    `${GRAPH_API}/${leadgenId}?fields=id,created_time,field_data,campaign_name,ad_name&access_token=${encodeURIComponent(token)}`
-  );
-  if (!res.ok) {
-    throw new Error(`Graph API ${res.status}: ${await res.text()}`);
+  const lead = await fetchMetaLead(leadgenId, { token });
+  const fieldNames = [...toFieldMap(lead).keys()];
+
+  try {
+    const data = IntakeLeadSchema.parse(mapMetaLead(lead, adId));
+    const result = await processIntakeLead(data);
+    console.log(
+      `[MetaWebhook] Lead ${leadgenId} → contact ${result.contactId} ` +
+      `(${result.route}, score ${result.totalScore})`
+    );
+  } catch (err) {
+    throw new IngestError(err, fieldNames);
   }
-  const lead = (await res.json()) as MetaLeadResponse;
-
-  const fields = new Map<string, string>();
-  for (const f of lead.field_data ?? []) {
-    if (f.values?.[0]) fields.set(f.name.toLowerCase().trim(), f.values[0]);
-  }
-
-  const { firstName, lastName } = extractName(fields);
-
-  const raw = {
-    firstName,
-    lastName,
-    email: fields.get('email') ?? '',
-    phone: normalizeMetaPhone(fields.get('phone_number') ?? fields.get('phone') ?? ''),
-    contactPreference: 'call' as const,
-    intent: extractIntent(fields),
-    firstTimeHomebuyer: matchesYes(fields, ['first_time_homebuyer', 'first-time buyer', 'first_time_buyer']),
-    healthcareWorker: matchesYes(fields, ['healthcare_worker', 'healthcare worker']),
-    areasOfInterest: fields.get('area') ?? fields.get('city') ?? fields.get('areas_of_interest') ?? fields.get('what_area_are_you_interested_in') ?? undefined,
-    timeline: extractTimeline(fields),
-    financingStatus: extractFinancing(fields),
-    // Consent: submitting the form = email follow-up consent (form disclaimer covers it).
-    // SMS consent ONLY from an explicit checkbox field on the Instant Form.
-    consentEmail: true,
-    consentSms: matchesYes(fields, ['sms_consent', 'text_consent', 'can_we_text_you', 'i_agree_to_receive_texts']),
-    source: 'meta-lead-ad',
-    utmSource: 'facebook',
-    utmMedium: 'paid-social',
-    utmCampaign: lead.campaign_name ?? lead.ad_name ?? adId ?? 'meta-leadgen',
-  };
-
-  const data = IntakeLeadSchema.parse(raw);
-  const result = await processIntakeLead(data);
-  console.log(`[MetaWebhook] Lead ${leadgenId} → contact ${result.contactId} (${result.route}, score ${result.totalScore})`);
-}
-
-function extractName(fields: Map<string, string>): { firstName: string; lastName: string } {
-  const first = fields.get('first_name');
-  const last = fields.get('last_name');
-  if (first) return { firstName: first, lastName: last || '—' };
-
-  const full = fields.get('full_name') ?? fields.get('name') ?? '';
-  const parts = full.trim().split(/\s+/);
-  return {
-    firstName: parts[0] || 'Unknown',
-    lastName: parts.slice(1).join(' ') || '—',
-  };
-}
-
-function extractIntent(fields: Map<string, string>): 'buyer' | 'seller' | 'both' | 'unknown' {
-  const v = (
-    fields.get('intent') ??
-    fields.get('are_you_buying_or_selling') ??
-    fields.get('buying_or_selling') ??
-    ''
-  ).toLowerCase();
-  const buying = v.includes('buy');
-  const selling = v.includes('sell');
-  if (buying && selling) return 'both';
-  if (buying) return 'buyer';
-  if (selling) return 'seller';
-  return 'unknown';
-}
-
-function extractTimeline(fields: Map<string, string>): 'now' | '30-60d' | '3-6m' | '6m+' | 'researching' {
-  const v = (
-    fields.get('timeline') ??
-    fields.get('when_are_you_looking_to_move') ??
-    fields.get('when_do_you_want_to_buy') ??
-    ''
-  ).toLowerCase();
-  if (/asap|now|immediately|this month/.test(v)) return 'now';
-  if (/1.?2 month|30|60|couple month/.test(v)) return '30-60d';
-  if (/3.?6 month|this year|few month/.test(v)) return '3-6m';
-  if (/6|next year|12/.test(v)) return '6m+';
-  return 'researching';
-}
-
-function extractFinancing(fields: Map<string, string>): 'pre-approved' | 'need-lender' | 'need-dpa' | 'need-credit-repair' | 'unsure' {
-  const v = (
-    fields.get('financing') ??
-    fields.get('are_you_pre-approved') ??
-    fields.get('are_you_pre_approved') ??
-    fields.get('financing_status') ??
-    ''
-  ).toLowerCase();
-  if (/pre.?approved|cash/.test(v)) return 'pre-approved';
-  if (/credit/.test(v)) return 'need-credit-repair';
-  if (/down payment|dpa|assistance/.test(v)) return 'need-dpa';
-  if (/lender|no|not yet/.test(v)) return 'need-lender';
-  return 'unsure';
-}
-
-function matchesYes(fields: Map<string, string>, keys: string[]): boolean {
-  for (const key of keys) {
-    const v = fields.get(key)?.toLowerCase();
-    if (v && /yes|true|1|checked|agree/.test(v)) return true;
-  }
-  return false;
-}
-
-function normalizeMetaPhone(phone: string): string {
-  // Meta sends E.164 like "+12255551234" — keep it; intake accepts any 7+ char string
-  return phone.replace(/[^\d+]/g, '');
 }

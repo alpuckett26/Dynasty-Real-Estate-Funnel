@@ -46,6 +46,18 @@ This is the only source that reliably produces leads *every day* from day one.
      verify token = the `META_VERIFY_TOKEN` you set in Vercel
   4. Generate a Page access token with `leads_retrieval` permission →
      set as `META_PAGE_ACCESS_TOKEN`; app secret → `META_APP_SECRET`
+- **`META_APP_SECRET` is required in production.** The callback URL is public,
+  so without it anyone could POST fake leads; the endpoint refuses unsigned
+  requests rather than trusting them. If it is missing, every lead is rejected
+  and Adreanne is texted — this is deliberately loud, because the ads keep
+  spending either way. (Locally, an unset secret still skips verification.)
+- **A lead that fails to save is texted, not swallowed.** Meta counts a
+  delivered webhook as done and never resends it, so a failure here would
+  otherwise lose a lead you paid for. Transient Graph API errors are retried
+  automatically; anything still failing texts Adreanne the leadgen id, the
+  reason (expired token, missing permission, unmapped form field) and the
+  instruction to download it from **Meta Business Suite → All Tools → Instant
+  Forms → Download leads**. Page access tokens expire, so expect this one.
 - Campaign settings (compliance — do not skip):
   - **Special Ad Category: Housing** (required by Meta for real estate)
   - Instant Form must include a **"You agree we may text you" checkbox** —
