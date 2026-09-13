@@ -45,8 +45,12 @@ This is the only source that reliably produces leads *every day* from day one.
 - Setup (one time, ~1 hour):
   1. developers.facebook.com → create app → add **Webhooks** product
   2. Subscribe to object **Page**, field **`leadgen`**
-  3. Callback URL: `https://<your-domain>/api/webhooks/meta`,
-     verify token = the `META_VERIFY_TOKEN` you set in Vercel
+  3. Callback URL: `https://www.adreannetherealtor.com/api/webhooks/meta` —
+     **with `www`**. The bare domain answers a 307 redirect, and Meta does not
+     follow redirects on webhook POSTs, so a callback without `www` loses every
+     lead before this code runs (and none of the alerts below can catch it).
+     The same applies to the ManyChat and CallRail webhook URLs.
+     Verify token = the `META_VERIFY_TOKEN` you set in Vercel
   4. Generate a Page access token with `leads_retrieval` permission →
      set as `META_PAGE_ACCESS_TOKEN`; app secret → `META_APP_SECRET`
 - **`META_APP_SECRET` is required in production.** The callback URL is public,
