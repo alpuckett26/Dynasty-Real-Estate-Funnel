@@ -161,8 +161,8 @@ texts Adreanne — it does not quietly find nothing.
 | Real-time | Hot lead (score ≥70) from any source | SMS to Adreanne + Slack, within seconds |
 | Real-time | Meta lead ad submission | HubSpot contact + instant sequence step 0 |
 | 7:00 AM | Reddit intent scan + scraper health check | New leads to HubSpot if Reddit is on; SMS **only** if an enabled source is blocked or misconfigured |
-| 9:00 AM | Sequence steps due today | Emails/SMS go out to leads |
-| 10:00 AM | Reactivation batch | Dormant leads get re-engagement touch |
+| 9:00 AM | Sequence steps due today | Emails/SMS go out to leads; SMS to Adreanne **only** if a send failed or HubSpot could not be read |
+| 10:00 AM | Reactivation batch | Dormant leads get re-engagement touch; SMS to Adreanne **only** on failures |
 | 6:00 PM | **Daily Lead Digest** | Email + SMS + Slack: every lead from the last 24h, by source and temperature, hot ones listed with phone numbers |
 
 The 6pm digest fires **even on a zero day** — so a quiet day is visible

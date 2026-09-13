@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from '@hubspot/api-client';
 import { runNurtureAgent } from '@/lib/agents/nurture-agent';
-import { sendSMS } from '@/lib/sms/twilio';
+import { alertOwner, sendSMS } from '@/lib/sms/twilio';
 import { sendEmail } from '@/lib/email/resend';
 import { updateContact } from '@/lib/hubspot/client';
 import { isAuthorizedCron } from '@/lib/utils/cron-auth';
@@ -51,10 +51,15 @@ export async function GET(req: NextRequest) {
     contacts = result.results;
   } catch (err) {
     console.error('[CronReactivate] Search failed:', err);
+    await alertOwner(
+      `⚠️ Reactivation did not run: HubSpot search failed (${err instanceof Error ? err.message : String(err)}). ` +
+        'Check HUBSPOT_ACCESS_TOKEN.'
+    );
     return NextResponse.json({ error: 'HubSpot search failed' }, { status: 500 });
   }
 
   let reactivated = 0;
+  const failures: string[] = [];
 
   for (const contact of contacts) {
     const p = contact.properties;
@@ -93,16 +98,36 @@ export async function GET(req: NextRequest) {
         });
       }
 
+      reactivated++;
+
       // Update last_meaningful_interaction so we don't re-trigger next cycle
       await updateContact(contact.id, {
         last_meaningful_interaction: new Date().toISOString(),
-      } as never).catch(console.error);
-
-      reactivated++;
+      } as never).catch((err) => {
+        // Left unrecorded, this contact is picked up and messaged again tomorrow.
+        console.error(`[CronReactivate] Could not record send for ${contact.id}:`, err);
+        failures.push(`record ${contact.id} (will be re-sent tomorrow): ${err instanceof Error ? err.message : String(err)}`);
+      });
     } catch (err) {
       console.error(`[CronReactivate] Failed for contact ${contact.id}:`, err);
+      failures.push(`${contact.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  return NextResponse.json({ scanned: contacts.length, reactivated });
+  // Each failure used to be a log line under a 200, so an exhausted OpenAI or
+  // Twilio balance ended reactivation for good without anyone noticing.
+  let alerted: string | null = null;
+  if (failures.length > 0) {
+    alerted = await alertOwner(
+      `⚠️ Reactivation: ${failures.length} of ${contacts.length} contact${contacts.length === 1 ? '' : 's'} failed today.\n` +
+        failures.slice(0, 3).map((f) => `• ${f}`).join('\n') +
+        (failures.length > 3 ? `\n…and ${failures.length - 3} more in the Vercel logs.` : '') +
+        (reactivated === 0 ? '\nNOTHING was sent — check OpenAI, Twilio and Resend.' : '')
+    );
+  }
+
+  return NextResponse.json(
+    { scanned: contacts.length, reactivated, failed: failures.length, alerted },
+    { status: failures.length > 0 && reactivated === 0 ? 500 : 200 }
+  );
 }

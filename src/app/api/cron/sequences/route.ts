@@ -10,6 +10,7 @@ import { processStep, LeadContext } from '@/lib/sequences/runner';
 import { updateContact } from '@/lib/hubspot/client';
 import { ALL_SEQUENCES } from '@/lib/sequences';
 import { isAuthorizedCron } from '@/lib/utils/cron-auth';
+import { alertOwner } from '@/lib/sms/twilio';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -46,11 +47,18 @@ export async function GET(req: NextRequest) {
     contacts = result.results;
   } catch (err) {
     console.error('[CronSequences] Search failed:', err);
+    // Nobody reads cron status codes. An expired HubSpot token stops all
+    // nurture every day until someone is told.
+    await alertOwner(
+      `⚠️ Nurture sequences did not run: HubSpot search failed (${err instanceof Error ? err.message : String(err)}). ` +
+        'No follow-ups go out until this is fixed — check HUBSPOT_ACCESS_TOKEN.'
+    );
     return NextResponse.json({ error: 'HubSpot search failed' }, { status: 500 });
   }
 
   let sent = 0;
   let completed = 0;
+  const failures: string[] = [];
 
   for (const contact of contacts) {
     const p = contact.properties;
@@ -85,6 +93,7 @@ export async function GET(req: NextRequest) {
       sent++;
     } catch (err) {
       console.error(`[CronSequences] Step failed for contact ${contact.id}:`, err);
+      failures.push(`step ${stepIndex} of ${sequenceId} for ${contact.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // Advance to next step
@@ -95,7 +104,11 @@ export async function GET(req: NextRequest) {
       await updateContact(contact.id, {
         sequence_step: nextStepIndex,
         sequence_next_send_at: nextSendAt,
-      } as never).catch(console.error);
+      } as never).catch((err) => {
+        // Not advancing means this contact gets the same message again tomorrow.
+        console.error(`[CronSequences] Could not advance contact ${contact.id}:`, err);
+        failures.push(`advance ${contact.id} (will repeat step ${stepIndex}): ${err instanceof Error ? err.message : String(err)}`);
+      });
     } else {
       // Done — clear state
       await updateContact(contact.id, {
@@ -107,5 +120,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ processed: contacts.length, sent, completed });
+  // A failed step is not retried — the contact advances either way so one bad
+  // number cannot block a sequence forever. That made an empty Twilio balance
+  // or a revoked Resend key invisible: the cron answered 200 while walking
+  // every lead past messages that never went out. Say so instead.
+  let alerted: string | null = null;
+  if (failures.length > 0) {
+    alerted = await alertOwner(
+      `⚠️ Nurture sequences: ${failures.length} of ${contacts.length} due message${contacts.length === 1 ? '' : 's'} failed today.\n` +
+        failures.slice(0, 3).map((f) => `• ${f}`).join('\n') +
+        (failures.length > 3 ? `\n…and ${failures.length - 3} more in the Vercel logs.` : '') +
+        (sent === 0 && contacts.length > 0 ? '\nNOTHING was sent — check Twilio balance and the Resend key.' : '')
+    );
+  }
+
+  return NextResponse.json(
+    { processed: contacts.length, sent, completed, failed: failures.length, alerted },
+    { status: failures.length > 0 && sent === 0 ? 500 : 200 }
+  );
 }
