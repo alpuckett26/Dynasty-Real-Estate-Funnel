@@ -156,7 +156,14 @@ export async function runCRMActionAgent(
         dealstage: stage,
         pipeline: PIPELINE_ID,
       });
-    } catch { /* deal creation optional */ }
+    } catch (err) {
+      // The contact, note and task still save, so this is not a lost lead — but
+      // an empty catch here hid that no deal had ever been created. Log loudly.
+      console.error(
+        `[CRM] Deal not created for contact ${contactId} — the lead is saved but missing from the pipeline:`,
+        err instanceof Error ? err.message : err
+      );
+    }
   }
 
   // Create CRM note with AI summary (non-blocking)

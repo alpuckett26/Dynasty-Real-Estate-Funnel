@@ -157,13 +157,62 @@ export async function searchContactsCreatedSince(sinceMs: number): Promise<Recen
 
 // ─── Deals ────────────────────────────────────────────────────────────────────
 
+/**
+ * HubSpot's `dealstage` must be the stage's internal id (e.g. "4302060251" in a
+ * custom pipeline), not a readable key. Deals were sent `qualified_buyer`, which
+ * HubSpot rejects, and the caller swallowed the error — so no deal was ever
+ * created. Stage ids are assigned by HubSpot when the pipeline is created and
+ * differ per portal, so they are resolved at runtime by matching the stage
+ * label ("Qualified – Buyer") to the key ("qualified_buyer") instead of being
+ * hard-coded.
+ */
+const stageIdCache = new Map<string, Promise<Map<string, string>>>();
+
+const normaliseStage = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function loadStageIds(pipelineId: string): Promise<Map<string, string>> {
+  let pending = stageIdCache.get(pipelineId);
+  if (!pending) {
+    pending = getClient()
+      .crm.pipelines.pipelinesApi.getById('deals', pipelineId)
+      .then((p) => new Map(p.stages.map((s) => [normaliseStage(s.label), s.id])));
+    // A failed lookup must not poison the instance; let the next deal retry it.
+    pending.catch(() => stageIdCache.delete(pipelineId));
+    stageIdCache.set(pipelineId, pending);
+  }
+  return pending;
+}
+
+async function resolveDealStageId(pipelineId: string, stage: PipelineStage): Promise<string> {
+  let stages: Map<string, string>;
+  try {
+    stages = await loadStageIds(pipelineId);
+  } catch (err) {
+    throw new Error(
+      `Deal pipeline "${pipelineId}" could not be loaded — check HUBSPOT_PIPELINE_ID ` +
+        `(run npm run setup:hubspot to print the right id): ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  // Keys with no matching stage (e.g. needs_lender) belong at the pipeline's start.
+  const id = stages.get(normaliseStage(stage)) ?? stages.get(normaliseStage('new_lead'));
+  if (!id) {
+    throw new Error(
+      `Deal pipeline "${pipelineId}" has no "${stage}" or "New Lead" stage — ` +
+        'HUBSPOT_PIPELINE_ID likely points at a pipeline other than Dynasty Sales Pipeline'
+    );
+  }
+  return id;
+}
+
 export async function createDeal(
   contactId: string,
   properties: HubSpotDealProperties
 ): Promise<string> {
   const client = getClient();
+  const dealstage = await resolveDealStageId(properties.pipeline, properties.dealstage);
   const result = await client.crm.deals.basicApi.create({
-    properties: flattenProperties(properties),
+    properties: flattenProperties({ ...properties, dealstage }),
     associations: [
       {
         to: { id: contactId },
@@ -181,11 +230,13 @@ export async function createDeal(
 
 export async function updateDealStage(
   dealId: string,
-  stage: PipelineStage
+  stage: PipelineStage,
+  pipelineId = process.env.HUBSPOT_PIPELINE_ID ?? 'default'
 ): Promise<void> {
   const client = getClient();
+  const dealstage = await resolveDealStageId(pipelineId, stage);
   await client.crm.deals.basicApi.update(dealId, {
-    properties: { dealstage: stage },
+    properties: { dealstage },
   });
 }
 
