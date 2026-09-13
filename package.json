@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "setup:hubspot": "npx ts-node --project tsconfig.json scripts/setup-hubspot.ts",
+    "setup:hubspot": "npx ts-node --project scripts/tsconfig.json scripts/setup-hubspot.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
