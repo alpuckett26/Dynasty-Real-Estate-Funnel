@@ -116,7 +116,7 @@ export async function processIntakeLead(data: IntakeLead): Promise<ProcessedLead
 
   const { contactId } = await upsertContact(contactProps);
 
-  // CRM note (non-blocking)
+  // CRM note
   const noteLines = [
     `[INTAKE — ${new Date().toLocaleDateString()}]`,
     `Intent: ${data.intent} | Route: ${scoreResult.route.toUpperCase()} | Score: ${scoreResult.totalScore}`,
@@ -128,20 +128,26 @@ export async function processIntakeLead(data: IntakeLead): Promise<ProcessedLead
     `Stage: ${stage}`,
   ].filter(Boolean).join('\n');
 
-  createNote(contactId, noteLines).catch((e) => console.error('[Intake] note failed:', e?.message));
-
-  // Follow-up task (non-blocking)
-  createTask(contactId, {
-    subject: buildTaskSubject(scoreResult.route, data),
-    body: buildTaskBody(data, scoreResult.totalScore, stage),
-    status: 'NOT_STARTED',
-    taskType: data.contactPreference === 'email' ? 'EMAIL' : 'CALL',
-    dueDate: getTaskDueDateMs(scoreResult.route),
-  }).catch((e) => console.error('[Intake] task failed:', e?.message));
+  // Note, task and hot-lead alert must be awaited. They used to be fired and
+  // forgotten, but both callers (the intake form and the Meta webhook) return
+  // as soon as this resolves, and the platform may freeze the function then —
+  // discarding the "call NOW" text for a hot lead with nothing logged. They run
+  // together so awaiting costs one round-trip, and a failure in one still
+  // cannot stop the lead being saved or enrolled.
+  const followUps: Promise<unknown>[] = [
+    createNote(contactId, noteLines).catch((e) => console.error('[Intake] note failed:', e?.message)),
+    createTask(contactId, {
+      subject: buildTaskSubject(scoreResult.route, data),
+      body: buildTaskBody(data, scoreResult.totalScore, stage),
+      status: 'NOT_STARTED',
+      taskType: data.contactPreference === 'email' ? 'EMAIL' : 'CALL',
+      dueDate: getTaskDueDateMs(scoreResult.route),
+    }).catch((e) => console.error('[Intake] task failed:', e?.message)),
+  ];
 
   // Hot lead alert (Slack + SMS to Adreanne)
   if (scoreResult.route === 'hot') {
-    notifyHotLead({
+    followUps.push(notifyHotLead({
       name: `${data.firstName} ${data.lastName}`,
       phone: data.phone,
       email: data.email,
@@ -150,8 +156,10 @@ export async function processIntakeLead(data: IntakeLead): Promise<ProcessedLead
       tags,
       source: data.source,
       contactId,
-    }).catch(console.error);
+    }).catch(console.error));
   }
+
+  await Promise.all(followUps);
 
   // Enroll in nurture sequence (step 0 fires instantly)
   await enrollLead({
