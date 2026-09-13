@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { handleInboundEvent } from '@/lib/agents/supervisor';
 import { runNurtureAgent } from '@/lib/agents/nurture-agent';
 import { enrollLead } from '@/lib/sequences/runner';
-import { sendSMS } from '@/lib/sms/twilio';
+import { alertOwner, sendSMS } from '@/lib/sms/twilio';
 import { sendEmail } from '@/lib/email/resend';
 import { createHmac } from 'crypto';
 import { BOOKING_URL } from '@/lib/site';
@@ -125,43 +125,64 @@ async function handleCalendlyEvent(body: unknown): Promise<NextResponse> {
   const { name, email } = payload.invitee;
   const startTime = payload.event?.start_time;
 
-  // Upsert contact — create if not yet in HubSpot
-  let contactId = await findContactByEmailOrPhone(email);
-  if (!contactId) {
-    const nameParts = (name ?? '').split(' ');
-    contactId = await createContact({
-      firstName: nameParts[0] || undefined,
-      lastName: nameParts.slice(1).join(' ') || undefined,
-      email,
-      source: 'calendly',
-      channel_source: 'calendly',
-      consent_sms: false,
-      consent_email: true,
-      lead_route: 'warm',
-    } as never);
-  }
-
-  await updateContact(contactId, {
-    consultation_status: booked ? 'Booked' : 'Canceled',
-    last_meaningful_interaction: new Date().toISOString(),
-  } as never);
-
-  // Alert Adreanne via SMS
-  if (booked) {
-    const adreannePhone = process.env.ADREANNE_PHONE;
-    if (adreannePhone) {
-      const when = startTime
-        ? new Date(startTime).toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'short' })
-        : 'time TBD';
-      const displayName = name ?? email;
-      sendSMS(
-        adreannePhone,
-        `📅 New consultation booked — ${displayName} (${email}) at ${when}. Check HubSpot for details.`
-      ).catch(console.error);
+  // Upsert contact — create if not yet in HubSpot.
+  // Property names and enum values must match HubSpot exactly. This used to
+  // send firstName/lastName/source, channel_source 'calendly', lead_route
+  // 'warm' and consultation_status 'Canceled' — none of which HubSpot accepts —
+  // so every booking by someone new, and every cancellation, threw and was
+  // never recorded. Booked contacts then kept receiving "book a call" nurture.
+  let contactId: string | null = null;
+  let crmError = '';
+  try {
+    contactId = await findContactByEmailOrPhone(email);
+    if (!contactId) {
+      const nameParts = (name ?? '').split(' ');
+      contactId = await createContact({
+        firstname: nameParts[0] || undefined,
+        lastname: nameParts.slice(1).join(' ') || undefined,
+        email,
+        channel_source: 'unknown',
+        utm_source: 'calendly',
+        consent_sms: false,
+        consent_email: true,
+        lead_route: 'Warm',
+      });
     }
+
+    await updateContact(contactId, {
+      consultation_status: booked ? 'Booked' : 'Not Booked',
+      last_meaningful_interaction: new Date().toISOString(),
+    });
+  } catch (err) {
+    crmError = err instanceof Error ? err.message : String(err);
+    console.error('[Webhooks] Calendly HubSpot update failed:', err);
   }
 
-  return NextResponse.json({ ok: true, action: booked ? 'consultation_booked' : 'consultation_canceled', contactId });
+  // Alert Adreanne. This was a bare promise to ADREANNE_PHONE, a variable no
+  // doc mentions, so booking alerts were never sent, and would have been
+  // dropped by function freeze if they had been. alertOwner uses OWNER_PHONE
+  // and falls back to Slack/email.
+  if (booked || crmError) {
+    const when = startTime
+      ? new Date(startTime).toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'short' })
+      : 'time TBD';
+    const displayName = name ?? email;
+    await alertOwner(
+      `📅 Consultation ${booked ? 'booked' : 'canceled'} — ${displayName} (${email}) at ${when}.` +
+        (crmError
+          ? `\n⚠️ HubSpot was NOT updated (${crmError}) — update the contact by hand so nurture stops.`
+          : ' Check HubSpot for details.')
+    );
+  }
+
+  // Always 200 once alerted: a non-200 makes Calendly retry and re-alert, and
+  // repeated failures disable the subscription.
+  return NextResponse.json({
+    ok: !crmError,
+    action: booked ? 'consultation_booked' : 'consultation_canceled',
+    contactId,
+    ...(crmError ? { error: crmError } : {}),
+  });
 }
 
 export async function POST(req: NextRequest) {
