@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
   ].filter(Boolean).join('\n');
 
   const digestEmail = process.env.DIGEST_EMAIL ?? process.env.REPLY_TO_EMAIL;
-  const sends: Record<string, boolean> = { email: false, sms: false, slack: false };
+  const sends: Record<string, boolean | string> = { email: false, sms: false, slack: false };
 
   if (digestEmail) {
     try {
@@ -94,33 +94,38 @@ export async function GET(req: NextRequest) {
   }
 
   // ── SMS digest (short) ────────────────────────────────────────────────────
-  try {
-    const smsBody = total > 0
-      ? `📊 ATR Daily: ${total} new lead${total === 1 ? '' : 's'} (${hot.length} hot, ${warm.length} warm, ${cold.length} cold). ${hot.length ? `Call first: ${hot.slice(0, 2).map((c) => `${name(c)} ${c.phone ?? ''}`).join(', ')}. ` : ''}Details in your email + HubSpot.`
-      : `📊 ATR Daily: 0 new leads in the last 24h. Check that ads and chat are live.`;
-    await alertOwner(smsBody);
-    sends.sms = true;
-  } catch (err) {
-    console.error('[DailyDigest] SMS failed:', err);
-  }
+  // alertOwner falls back to Slack/email on its own; record where it actually
+  // landed rather than assuming the text went out.
+  const smsBody = total > 0
+    ? `📊 ATR Daily: ${total} new lead${total === 1 ? '' : 's'} (${hot.length} hot, ${warm.length} warm, ${cold.length} cold). ${hot.length ? `Call first: ${hot.slice(0, 2).map((c) => `${name(c)} ${c.phone ?? ''}`).join(', ')}. ` : ''}Details in your email + HubSpot.`
+    : `📊 ATR Daily: 0 new leads in the last 24h. Check that ads and chat are live.`;
+  const smsChannel = await alertOwner(smsBody);
+  sends.sms = smsChannel === 'sms' ? true : smsChannel ?? false;
 
   // ── Slack digest ──────────────────────────────────────────────────────────
   if (process.env.SLACK_WEBHOOK_URL) {
     try {
-      await fetch(process.env.SLACK_WEBHOOK_URL, {
+      const res = await fetch(process.env.SLACK_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: `📊 *Daily Lead Digest — ${dateLabel}*\nNew leads: *${total}* (🔥 ${hot.length} hot / ${warm.length} warm / ${cold.length} cold)\n${total > 0 ? sourceLines : '_No new leads today — check traffic sources._'}${hotList ? `\n\n*Call now:*\n${hotList}` : ''}`,
         }),
       });
+      // fetch only rejects on network errors; a revoked webhook answers 404.
+      if (!res.ok) throw new Error(`Slack webhook returned ${res.status}`);
       sends.slack = true;
     } catch (err) {
       console.error('[DailyDigest] Slack failed:', err);
     }
   }
 
+  // Nothing reached Adreanne. Answer 500 so the failure shows up in Vercel's
+  // cron and function logs instead of a green run.
+  const delivered = sends.email || sends.slack || smsChannel !== null;
+
   return NextResponse.json({
+    delivered,
     date: new Date().toISOString(),
     total,
     hot: hot.length,
@@ -128,7 +133,7 @@ export async function GET(req: NextRequest) {
     cold: cold.length,
     bySource: Object.fromEntries(bySource),
     sends,
-  });
+  }, { status: delivered ? 200 : 500 });
 }
 
 function name(c: RecentContact): string {

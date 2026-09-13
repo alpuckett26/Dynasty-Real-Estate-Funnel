@@ -17,6 +17,9 @@ from fastest-to-first-lead to slowest.
    - `OWNER_PHONE` — Adreanne's cell (hot-lead + daily digest SMS)
    - `RESEND_API_KEY` / `FROM_EMAIL` / `REPLY_TO_EMAIL` / `DIGEST_EMAIL` — email
    - `SLACK_WEBHOOK_URL` — hot-lead + digest alerts (optional but recommended)
+     — if an alert text fails (e.g. empty Twilio balance) it goes to Slack,
+     then to `DIGEST_EMAIL`. With none of the three working, the alert is lost,
+     so set at least one fallback.
    - `CRON_SECRET` + `WEBHOOK_SECRET` — random strings, keep private
    - `NEXT_PUBLIC_CALENDLY_URL` — Adreanne's real booking link
    - `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` — only if switching the Reddit
