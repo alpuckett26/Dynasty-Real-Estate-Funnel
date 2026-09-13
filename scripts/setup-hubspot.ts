@@ -12,6 +12,7 @@
  */
 
 import { Client } from '@hubspot/api-client';
+import type { PropertyCreate } from '@hubspot/api-client/lib/codegen/crm/properties/models/PropertyCreate';
 import config from '../config/hubspot-properties.json';
 
 const client = new Client({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN! });
@@ -67,8 +68,10 @@ async function createContactProperties() {
         name: prop.name,
         label: prop.label,
         groupName: prop.groupName,
-        type: prop.type,
-        fieldType: prop.fieldType,
+        // The SDK types these as string enums; every value in PropertyType and
+        // FieldType is a member, so the cast only bridges the nominal type.
+        type: prop.type as PropertyCreate['type'],
+        fieldType: prop.fieldType as PropertyCreate['fieldType'],
         description: prop.description ?? '',
         options: (prop.options ?? []).map((o) => ({
           label: o.label,
