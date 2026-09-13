@@ -6,6 +6,7 @@
  * Maintains session state throughout the funnel.
  */
 
+import { after } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { runConversationAgent } from './conversation-agent';
 import { runQualificationAgent } from './qualification-agent';
@@ -13,6 +14,7 @@ import { runCRMActionAgent } from './crm-action-agent';
 import { runNurtureAgent } from './nurture-agent';
 import { createAuditEntry } from '@/lib/utils/audit';
 import { notifyHotLead } from '@/lib/notifications/slack';
+import { alertOwner } from '@/lib/sms/twilio';
 import { runGuardrailCheck, resolveGuardrailedText } from '@/lib/utils/guardrail';
 import { BOOKING_URL } from '@/lib/site';
 import type { SupervisorState, SupervisorDecision, AgentName } from '@/types/agent';
@@ -86,8 +88,12 @@ export async function handleChatTurn(
   let bookingPrompt = false;
   if (convoResult.contactCaptured && !state.completedAgents.includes('qualification')) {
     bookingPrompt = true;
-    // Fire-and-forget qualification + CRM (non-blocking for chat UX)
-    runQualificationAndCRM(nextState).catch(console.error);
+    // Qualification + CRM run after the reply is sent, so the chat stays fast.
+    // This must go through after(), not a bare promise: the platform may freeze
+    // the function as soon as the response is returned, which silently
+    // discarded the HubSpot write and left chat leads nowhere at all. after()
+    // keeps the function alive until the work finishes.
+    after(() => runQualificationAndCRM(nextState));
     nextState.completedAgents = [...nextState.completedAgents, 'qualification', 'crm-action'];
   }
 
@@ -153,18 +159,38 @@ async function runQualificationAndCRM(state: SupervisorState): Promise<void> {
   const history = (state.context.history as ConversationMessage[]) ?? [];
   const capturedContact = (state.context.capturedContact as Record<string, string>) ?? {};
 
-  const qualification = await runQualificationAgent({
-    conversationHistory: history,
-    capturedContact,
-    source: 'website-chat',
-  });
+  try {
+    const qualification = await runQualificationAgent({
+      conversationHistory: history,
+      capturedContact,
+      source: 'website-chat',
+    });
 
-  await runCRMActionAgent({
-    contact: capturedContact,
-    qualification,
-    source: 'website-chat',
-    consent: { sms: false, email: true, dm: true },
-  });
+    const crmResult = await runCRMActionAgent({
+      contact: capturedContact,
+      qualification,
+      source: 'website-chat',
+      consent: { sms: false, email: true, dm: true },
+    });
+
+    // Every other intake path alerts on a hot lead; chat never did, so the
+    // highest-intent visitors (the ones who talked to the bot) got no call.
+    if (qualification.route === 'hot') {
+      await notifyAgentOfHotLead(crmResult.hubspotContactId, capturedContact, qualification.totalScore)
+        .catch((err) => console.error('[Supervisor] Chat hot-lead alert failed:', err));
+    }
+  } catch (err) {
+    // The chat session is already marked qualified, so nothing retries this.
+    // The contact details exist only in this function now; hand them to
+    // Adreanne rather than losing the lead to a log line.
+    console.error('[Supervisor] Chat lead failed to save:', err);
+    const who = [capturedContact.firstName, capturedContact.lastName].filter(Boolean).join(' ') || 'Unknown name';
+    await alertOwner(
+      `⚠️ Chat lead NOT saved to HubSpot — add manually.\n${who}\n` +
+        `${capturedContact.phone ?? ''} ${capturedContact.email ?? ''}\n` +
+        `Reason: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
 }
 
 async function notifyAgentOfHotLead(
