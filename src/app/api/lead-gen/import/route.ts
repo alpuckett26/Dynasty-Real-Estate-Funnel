@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
   }
 
   let created = 0, skipped = 0, errors = 0;
+  const noTask: string[] = [];
 
   for (const lead of leads) {
     try {
@@ -107,13 +108,20 @@ export async function POST(req: NextRequest) {
 
       const who = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'owner';
       const where = lead.propertyAddress ? ` — ${lead.propertyAddress}` : '';
+      // The call task is the only thing that puts a purchased record in front
+      // of Adreanne — nothing texts or emails these contacts. A swallowed
+      // failure here left a contact that no one would ever call, counted as
+      // "created". Report it so the rows can be re-worked.
       await createTask(contactId, {
         subject: `📞 Call ${lead.leadType}: ${who}${where}`,
         body: `Purchased ${listLabel} record. Call only — no automated texts.\n${lead.phones.join(' / ')}`,
         status: 'NOT_STARTED',
         taskType: 'CALL',
         dueDate: Date.now() + 2 * 60 * 60 * 1000,
-      } as never).catch(console.error);
+      } as never).catch((err) => {
+        console.error('[LeadImport] Call task failed:', err);
+        noTask.push(`${who} (contact ${contactId})`);
+      });
 
       created++;
     } catch (err) {
@@ -122,5 +130,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, list: listLabel, parsed: leads.length, created, skipped, errors });
+  return NextResponse.json({
+    ok: errors === 0 && noTask.length === 0,
+    list: listLabel,
+    parsed: leads.length,
+    created,
+    skipped,
+    errors,
+    // Created in HubSpot but with no call task — find these and add one.
+    createdWithoutCallTask: noTask,
+  });
 }
